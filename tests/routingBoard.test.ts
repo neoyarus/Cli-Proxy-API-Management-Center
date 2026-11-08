@@ -97,6 +97,7 @@ describe('routing board reading', () => {
       maxRetryCredentials: 0,
     });
     expect(readRoutingSettings({ routing: { strategy: 'bogus' } }).strategy).toBe('round-robin');
+    expect(readRoutingSettings({ routing: { strategy: 'reset_drain' } }).strategy).toBe('reset-drain');
   });
 
   test('expands groups with key overrides, compat providers and credentials', () => {
@@ -392,6 +393,15 @@ describe('route preview', () => {
     const current = board();
     const draft = draftFromBoard(current);
     draft.settings = { ...draft.settings, strategy: 'fill-first' };
+    const preview = resolveRoute(current, draft, catalog, null, 0);
+    expect(preview.tiers[0].state).toBe('active');
+    expect(preview.tiers[0].members[0].share).toBeNull();
+  });
+
+  test('reset-drain has no fixed split', () => {
+    const current = board();
+    const draft = draftFromBoard(current);
+    draft.settings = { ...draft.settings, strategy: 'reset-drain' };
     const preview = resolveRoute(current, draft, catalog, null, 0);
     expect(preview.tiers[0].state).toBe('active');
     expect(preview.tiers[0].members[0].share).toBeNull();
