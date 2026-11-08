@@ -15,6 +15,12 @@ describe('visual config weighted routing strategy', () => {
     expect(parseRoutingStrategy(undefined)).toBe('round-robin');
   });
 
+  test('recognizes reset-drain and its aliases instead of falling back to round-robin', () => {
+    for (const raw of ['reset-drain', 'resetdrain', 'reset-first', 'resetfirst', 'rd']) {
+      expect(parseRoutingStrategy(raw)).toBe('reset-drain');
+    }
+  });
+
   test('writes weighted-round-robin without coercing it to round-robin', () => {
     function Harness() {
       const visualConfig = useVisualConfig();
