@@ -220,7 +220,8 @@
     "routing_strategy_round_robin": "round-robin (luân phiên)",
     "routing_strategy_weighted_round_robin": "weighted-round-robin (luân phiên có trọng số)",
     "routing_strategy_fill_first": "fill-first (ưu tiên lấp đầy)",
-    "routing_strategy_reset_drain": "reset-drain (đặt lại sớm nhất)"
+    "routing_strategy_reset_drain": "reset-drain (đặt lại sớm nhất)",
+    "routing_strategy_reset_pace": "reset-pace (đặt lại sớm nhất, theo nhịp)"
   },
   "auth_files": {
     "title": "Quản lý File xác thực",
@@ -1237,6 +1238,7 @@
           "strategy_weighted_round_robin": "Weighted Round Robin",
           "strategy_fill_first": "Fill First",
           "strategy_reset_drain": "Reset Drain",
+          "strategy_reset_pace": "Reset Pace",
           "session_affinity_ttl": "TTL Session Affinity",
           "force_model_prefix": "Bắt buộc tiền tố model",
           "force_model_prefix_desc": "Yêu cầu model không có tiền tố chỉ dùng credential không có tiền tố",
@@ -1651,10 +1653,12 @@
     "strategy_weighted_round_robin": "Xoay vòng có trọng số",
     "strategy_fill_first": "Lấp đầy trước",
     "strategy_reset_drain": "Đặt lại sớm nhất trước",
+    "strategy_reset_pace": "Đặt lại sớm nhất, theo nhịp",
     "strategy_round_robin_desc": "Mỗi thông tin xác thực trong tầng lần lượt nhận yêu cầu.",
     "strategy_weighted_round_robin_desc": "Yêu cầu được chia trong tầng theo trọng số.",
     "strategy_fill_first_desc": "Một thông tin xác thực nhận hết cho đến khi không khả dụng, rồi đến cái tiếp theo.",
     "strategy_reset_drain_desc": "Dùng thông tin xác thực có hạn mức Codex/Claude đặt lại sớm nhất để tiêu hạn mức sắp hết hạn trước; nếu cùng ngày thì chọn cái còn nhiều hạn mức hơn.",
+    "strategy_reset_pace_desc": "Giống đặt lại sớm nhất trước, nhưng chỉ khi thông tin xác thực còn đúng nhịp hạn mức tuần (ví dụ dùng tối đa 50% khi đã qua nửa chu kỳ). Thông tin vượt nhịp sẽ chờ; nếu tất cả đều vượt, dùng cái vượt ít nhất.",
     "affinity_label": "Gắn phiên",
     "affinity_desc": "Yêu cầu của cùng một phiên đi tới cùng một thông tin xác thực, tự chuyển khi nó không khả dụng.",
     "retry_label": "Chuyển đổi dự phòng",

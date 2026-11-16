@@ -220,7 +220,8 @@
     "routing_strategy_round_robin": "Round-Robin (Döngü)",
     "routing_strategy_weighted_round_robin": "Weighted-Round-Robin (Ağırlıklı Döngü)",
     "routing_strategy_fill_first": "Fill-First (Önceliklendir)",
-    "routing_strategy_reset_drain": "reset-drain (en yakın sıfırlama)"
+    "routing_strategy_reset_drain": "reset-drain (en yakın sıfırlama)",
+    "routing_strategy_reset_pace": "reset-pace (en yakın sıfırlama, tempolu)"
   },
   "auth_files": {
     "title": "Kimlik Dosyası Yönetimi",
@@ -1447,6 +1448,7 @@
           "strategy_weighted_round_robin": "Ağırlıklı Round Robin",
           "strategy_fill_first": "Fill First",
           "strategy_reset_drain": "Reset Drain",
+          "strategy_reset_pace": "Reset Pace",
           "session_affinity_ttl": "Oturum Yakınlığı TTL",
           "force_model_prefix": "Model Önekini Zorla",
           "force_model_prefix_desc": "Öneksiz Model İstekleri Yalnızca Öneki Olmayan Kimlik Bilgilerini Kullanır",
@@ -1695,10 +1697,12 @@
     "strategy_weighted_round_robin": "Ağırlıklı döngüsel",
     "strategy_fill_first": "Önce doldur",
     "strategy_reset_drain": "Önce en yakın sıfırlama",
+    "strategy_reset_pace": "En yakın sıfırlama, tempolu",
     "strategy_round_robin_desc": "Katmandaki her kimlik sırayla istek alır.",
     "strategy_weighted_round_robin_desc": "İstekler katman içinde ağırlığa göre bölünür.",
     "strategy_fill_first_desc": "Bir kimlik kullanılamaz olana kadar her şeyi alır, sonra sıradakine geçilir.",
     "strategy_reset_drain_desc": "Codex/Claude kotası en erken sıfırlanan kimliği kullanır, böylece süresi dolacak kota önce harcanır; aynı gün sıfırlananlarda kalan kotası fazla olan seçilir.",
+    "strategy_reset_pace_desc": "Önce en yakın sıfırlama gibidir, ancak yalnızca kimlik haftalık kotasında tempodayken (ör. sıfırlamaya yarı yolda en fazla %50 kullanım). Tempoyu aşanlar bekler; hepsi aşmışsa en az aşan kullanılır.",
     "affinity_label": "Oturum bağlılığı",
     "affinity_desc": "Bir oturumun istekleri aynı kimliğe gider; kullanılamazsa otomatik olarak devredilir.",
     "retry_label": "Yük devretme",

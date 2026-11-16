@@ -437,6 +437,9 @@ export function parseRoutingStrategy(raw: unknown): RoutingStrategy {
   if (['reset-drain', 'resetdrain', 'reset-first', 'resetfirst', 'rd'].includes(normalized)) {
     return 'reset-drain';
   }
+  if (['reset-pace', 'resetpace', 'reset-drain-paced', 'paced-reset-drain', 'rp'].includes(normalized)) {
+    return 'reset-pace';
+  }
   return 'round-robin';
 }
 

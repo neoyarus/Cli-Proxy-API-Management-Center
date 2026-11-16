@@ -21,6 +21,12 @@ describe('visual config weighted routing strategy', () => {
     }
   });
 
+  test('recognizes reset-pace and its aliases instead of falling back to round-robin', () => {
+    for (const raw of ['reset-pace', 'resetpace', 'reset-drain-paced', 'paced-reset-drain', 'rp']) {
+      expect(parseRoutingStrategy(raw)).toBe('reset-pace');
+    }
+  });
+
   test('writes weighted-round-robin without coercing it to round-robin', () => {
     function Harness() {
       const visualConfig = useVisualConfig();

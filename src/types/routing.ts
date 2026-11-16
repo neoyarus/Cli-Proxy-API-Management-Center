@@ -16,6 +16,7 @@ export const ROUTING_STRATEGIES: readonly RoutingStrategy[] = [
   'weighted-round-robin',
   'fill-first',
   'reset-drain',
+  'reset-pace',
 ];
 
 /** v8 `api-keys.<family>` lists whose keys schedule one by one. */
