@@ -77,6 +77,7 @@ export function DashboardPage() {
     }
     if (raw === 'fill-first') return t('basic_settings.routing_strategy_fill_first');
     if (raw === 'reset-drain') return t('basic_settings.routing_strategy_reset_drain');
+    if (raw === 'reset-pace') return t('basic_settings.routing_strategy_reset_pace');
     return raw;
   }, [config?.routingStrategy, t]);
 

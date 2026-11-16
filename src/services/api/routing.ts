@@ -102,6 +102,9 @@ export function normalizeRoutingStrategy(value: unknown): RoutingStrategy {
   if (['reset-drain', 'resetdrain', 'reset-first', 'resetfirst', 'rd'].includes(text)) {
     return 'reset-drain';
   }
+  if (['reset-pace', 'resetpace', 'reset-drain-paced', 'paced-reset-drain', 'rp'].includes(text)) {
+    return 'reset-pace';
+  }
   // CPA runs an unrecognised strategy as round-robin.
   return 'round-robin';
 }

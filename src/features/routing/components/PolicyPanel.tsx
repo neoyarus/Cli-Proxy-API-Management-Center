@@ -17,7 +17,8 @@ export interface PolicyPanelProps {
 
 function StrategyMark({ strategy }: { strategy: RoutingStrategy }) {
   // Three dots: even (round-robin), graded (weighted), first one filled (fill-first),
-  // rising toward the credential whose quota resets soonest (reset-drain).
+  // rising toward the credential whose quota resets soonest (reset-drain), peaking in
+  // the middle for reset-drain held to each credential's pace (reset-pace).
   const opacities =
     strategy === 'round-robin'
       ? [1, 1, 1]
@@ -25,7 +26,9 @@ function StrategyMark({ strategy }: { strategy: RoutingStrategy }) {
         ? [1, 0.6, 0.3]
         : strategy === 'reset-drain'
           ? [0.25, 0.6, 1]
-          : [1, 0.25, 0.25];
+          : strategy === 'reset-pace'
+            ? [0.5, 1, 0.5]
+            : [1, 0.25, 0.25];
   return (
     <svg width="18" height="10" viewBox="0 0 18 10" aria-hidden="true" focusable="false">
       {opacities.map((opacity, index) => (

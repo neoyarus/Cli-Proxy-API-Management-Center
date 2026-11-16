@@ -39,6 +39,10 @@ export function SectionNetwork({
       value: 'reset-drain',
       label: t('config_management.visual.sections.network.strategy_reset_drain'),
     },
+    {
+      value: 'reset-pace',
+      label: t('config_management.visual.sections.network.strategy_reset_pace'),
+    },
   ];
 
   const disableImageGenerationOptions: Array<{ value: DisableImageGeneration; label: string }> = [

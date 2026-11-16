@@ -98,6 +98,7 @@ describe('routing board reading', () => {
     });
     expect(readRoutingSettings({ routing: { strategy: 'bogus' } }).strategy).toBe('round-robin');
     expect(readRoutingSettings({ routing: { strategy: 'reset_drain' } }).strategy).toBe('reset-drain');
+    expect(readRoutingSettings({ routing: { strategy: 'Reset_Pace' } }).strategy).toBe('reset-pace');
   });
 
   test('expands groups with key overrides, compat providers and credentials', () => {
@@ -398,12 +399,14 @@ describe('route preview', () => {
     expect(preview.tiers[0].members[0].share).toBeNull();
   });
 
-  test('reset-drain has no fixed split', () => {
-    const current = board();
-    const draft = draftFromBoard(current);
-    draft.settings = { ...draft.settings, strategy: 'reset-drain' };
-    const preview = resolveRoute(current, draft, catalog, null, 0);
-    expect(preview.tiers[0].state).toBe('active');
-    expect(preview.tiers[0].members[0].share).toBeNull();
+  test('reset-drain and reset-pace have no fixed split', () => {
+    for (const strategy of ['reset-drain', 'reset-pace'] as const) {
+      const current = board();
+      const draft = draftFromBoard(current);
+      draft.settings = { ...draft.settings, strategy };
+      const preview = resolveRoute(current, draft, catalog, null, 0);
+      expect(preview.tiers[0].state).toBe('active');
+      expect(preview.tiers[0].members[0].share).toBeNull();
+    }
   });
 });
