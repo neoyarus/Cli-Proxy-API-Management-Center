@@ -49,16 +49,6 @@ const PACE_GAP_PX = 3;
 /** Matches `.quotaPaceTick { width }`. */
 const PACE_TICK_PX = 2;
 
-export interface QuotaMeterProps {
-  percent: number | null;
-  classes: QuotaClassMap;
-  index?: number;
-  /** Share of the window's time still left, 0–100; null or absent draws no tick. */
-  paceLeftPercent?: number | null;
-  /** Tooltip for the bar when the tick is shown. */
-  paceTitle?: string;
-}
-
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 /**

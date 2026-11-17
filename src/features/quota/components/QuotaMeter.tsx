@@ -18,6 +18,16 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
 export const QUOTA_PROGRESS_HIGH_THRESHOLD = 70;
 export const QUOTA_PROGRESS_MEDIUM_THRESHOLD = 30;
 
+export interface QuotaMeterProps {
+  percent: number | null;
+  classes: QuotaClassMap;
+  index?: number;
+  /** Share of the window's time still left, 0–100; null or absent draws no tick. */
+  paceLeftPercent?: number | null;
+  /** Tooltip for the bar when the tick is shown. */
+  paceTitle?: string;
+}
+
 export function QuotaMeter({
   percent,
   classes,
