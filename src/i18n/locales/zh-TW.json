@@ -500,6 +500,8 @@
     "balance_reset": "重設時間",
     "balance_reset_unknown": "未提供",
     "stale_snapshot": "重新整理失敗。顯示上次成功檢查的結果：{{time}}",
+    "source_label": "來源",
+    "source_headers": "回應標頭，{{time}}",
     "plan_label": "方案",
     "plan_unknown": "未知",
     "plan_free": "Free",

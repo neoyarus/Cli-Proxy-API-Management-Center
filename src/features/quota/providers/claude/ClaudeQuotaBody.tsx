@@ -28,6 +28,7 @@ export function ClaudeQuotaBody({
   const windows = quota.windows ?? [];
   const extraUsage = quota.extraUsage ?? null;
   const planType = quota.planType ?? null;
+  const fromHeaders = quota.source === 'headers';
   const language = i18n.resolvedLanguage;
   const formatMoney = (value: number | null, currency = 'USD', divisor = 1): string => {
     if (value === null) return '--';
@@ -68,13 +69,23 @@ export function ClaudeQuotaBody({
           })}
         </div>
       )}
-      {(planType || planItems) && (
+      {(planType || planItems || fromHeaders) && (
         <div className={classes.codexPlan}>
           {planType && (
             <span className={classes.codexPlanItem} data-quota-plan="">
               <span className={classes.codexPlanLabel}>{t('claude_quota.plan_label')}</span>
               <span className={planValueClassForTier(resolveClaudeCardTier(planType), classes)}>
                 {t(`claude_quota.${planType}`)}
+              </span>
+            </span>
+          )}
+          {fromHeaders && (
+            <span className={classes.codexPlanItem} data-quota-source="headers">
+              <span className={classes.codexPlanLabel}>{t('claude_quota.source_label')}</span>
+              <span className={classes.codexPlanValue}>
+                {t('claude_quota.source_headers', {
+                  time: quota.observedAt ? new Date(quota.observedAt).toLocaleString(language) : '--',
+                })}
               </span>
             </span>
           )}

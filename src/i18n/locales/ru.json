@@ -505,6 +505,8 @@
     "balance_reset": "Сброс",
     "balance_reset_unknown": "Не указан",
     "stale_snapshot": "Не удалось обновить. Последняя успешная проверка: {{time}}",
+    "source_label": "Источник",
+    "source_headers": "заголовки ответа, {{time}}",
     "plan_label": "План",
     "plan_unknown": "Неизвестно",
     "plan_free": "Free",

@@ -515,6 +515,8 @@
     "balance_reset": "Resets",
     "balance_reset_unknown": "Not provided",
     "stale_snapshot": "Refresh failed. Showing last successful check: {{time}}",
+    "source_label": "Source",
+    "source_headers": "response headers, {{time}}",
     "plan_label": "Plan",
     "plan_unknown": "Unknown",
     "plan_free": "Free",
