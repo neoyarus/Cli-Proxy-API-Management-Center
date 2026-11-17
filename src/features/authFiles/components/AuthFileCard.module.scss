@@ -390,6 +390,14 @@
   color: var(--text-tertiary);
 }
 
+/* Manual pause end: same muted mono line as the SIWC expiry. */
+.manualCooldown {
+  font-family: $font-mono;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+}
+
 /* ---------- 页脚动作区 ---------- */
 
 .actions {

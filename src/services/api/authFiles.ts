@@ -19,6 +19,17 @@ import { normalizeAuthFileCooldowns, normalizeCooldownTimestamp } from './authFi
 
 type AuthFileStatusResponse = { status: string; disabled: boolean };
 export type AuthFileLookup = { name: string; authIndex?: string };
+export type ManualCooldownRequest = { until: string } | { durationSeconds: number };
+
+/** End of an operator-set pause (`cooldown_until` in the credential list), if still active. */
+export const readManualCooldownUntil = (
+  file: Record<string, unknown>,
+  nowMs: number = Date.now()
+): number | null => {
+  const raw = file['cooldown_until'];
+  const until = typeof raw === 'string' ? Date.parse(raw) : NaN;
+  return Number.isFinite(until) && until > nowMs ? until : null;
+};
 type AuthFileEntry = AuthFilesResponse['files'][number];
 export type AuthFileFieldsPatch = {
   request_retry?: number | null;
@@ -581,6 +592,19 @@ export const authFilesApi = {
   resetCooldown: (authIndex: string) =>
     apiClient.post<AuthFileCooldownResetResponse>('/routing/cooldown/reset', {
       auth_index: authIndex,
+    }),
+
+  /** Pause a credential until a time (or for a duration); no pause given resumes it. */
+  setManualCooldown: (
+    name: string,
+    authIndex: string | undefined,
+    pause: ManualCooldownRequest | null
+  ) =>
+    apiClient.post<{ status: string; cooldown_until: string }>('/credentials/cooldown', {
+      name,
+      ...(authIndex ? { auth_index: authIndex } : {}),
+      ...(pause && 'until' in pause ? { until: pause.until } : {}),
+      ...(pause && 'durationSeconds' in pause ? { duration_seconds: pause.durationSeconds } : {}),
     }),
 
   uploadFiles: async (files: File[]): Promise<AuthFileBatchUploadResult> => {
