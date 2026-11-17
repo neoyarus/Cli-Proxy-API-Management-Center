@@ -20,6 +20,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { StackedColumns } from '@/components/ui/StackedColumns';
 import { readCardLayout, writeCardLayout, type CardLayout } from '@/components/ui/cardLayout';
 import { useHeaderRefresh } from '@/hooks/useHeaderRefresh';
+import { useInterval } from '@/hooks/useInterval';
 import { useNow } from '@/hooks/useNow';
 import { useRevealGroup } from '@/hooks/motion';
 import { useAuthStore, useQuotaStore, useThemeStore } from '@/stores';
@@ -135,6 +136,25 @@ export function QuotaPage() {
       listRequestRef.current += 1;
     };
   }, [loadFiles]);
+
+  // Re-read the credential list in the background so cards follow the proxy's latest
+  // response-header usage. Only CPA is asked; no provider usage request is made.
+  const refreshFilesQuietly = useCallback(async () => {
+    if (connectionStatus !== 'connected' || loading) return;
+    const requestId = ++listRequestRef.current;
+    try {
+      const data = await authFilesApi.list();
+      if (
+        requestId === listRequestRef.current &&
+        sessionGeneration === useQuotaStore.getState().cacheGeneration
+      ) {
+        setFiles(data?.files || []);
+      }
+    } catch {
+      // A failed background read keeps the current list; the next tick retries.
+    }
+  }, [connectionStatus, loading, sessionGeneration]);
+  useInterval(() => void refreshFilesQuietly(), connectionStatus === 'connected' ? 60_000 : null);
 
   /* ---------- 额度缓存 ----------
    * 排在归类/排序之前：「最快恢复优先」要读它算排序键。 */

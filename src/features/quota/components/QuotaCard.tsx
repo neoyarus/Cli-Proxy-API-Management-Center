@@ -3,7 +3,7 @@
  * Claude observations remain visible while refreshing or after a failed read.
  */
 
-import { useState, type CSSProperties } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconChevronDown, IconRefreshCw } from '@/components/ui/icons';
 import type { ClaudeQuotaState, CodexQuotaState, ResolvedTheme } from '@/types';
@@ -21,7 +21,11 @@ import { isQuotaRefreshDisabled, type QuotaFileEntry } from '../logic';
 import { useClaudeResetGrants } from '../providers/claude/ClaudeResetGrants';
 import { ClaudeResetGrantDialog } from '../providers/claude/ClaudeResetGrantDialog';
 import { ClaudeResetGrantDetails } from '../providers/claude/ClaudeResetGrantDetails';
-import { hasClaudeUsageData } from '../providers/claude/data';
+import {
+  claudeHeaderQuotaState,
+  isClaudeSetupTokenFile,
+  pickLatestClaudeState,
+} from '../providers/claude/data';
 import { CodexCreditOverageDialog } from '../providers/codex/CodexCreditOverageDialog';
 import { CodexCreditOverageRow } from '../providers/codex/CodexCreditOverageRow';
 import { useCodexCreditOverage } from '../providers/codex/useCodexCreditOverage';
@@ -68,8 +72,6 @@ export function QuotaCard(props: QuotaCardProps) {
   const { t } = useTranslation();
   const adapter = QUOTA_ADAPTERS[entry.type];
   const file = entry.file;
-  const retainedClaudeUsage =
-    entry.type === 'claude' && hasClaudeUsageData(quota as ClaudeQuotaState | undefined);
   const displayName = getQuotaDisplayName(file);
 
   // Capture the entrance delay only at mount, without a render-time ref read.
@@ -81,9 +83,21 @@ export function QuotaCard(props: QuotaCardProps) {
 
   const status = quota?.status ?? 'idle';
   const loading = status === 'loading';
+  // Setup tokens are inference-only: no usage, profile or reset-grant requests for them.
+  const setupToken = entry.type === 'claude' && isClaudeSetupTokenFile(file);
+  const claudeHeaderState = useMemo(
+    () => (entry.type === 'claude' ? claudeHeaderQuotaState(file, t) : null),
+    [entry.type, file, t]
+  );
+  // Claude cards always show the newest data available: the stored reading or the
+  // proxy's response-header snapshot, whichever was observed later.
+  const claudeDisplay =
+    entry.type === 'claude'
+      ? pickLatestClaudeState(quota as ClaudeQuotaState | undefined, claudeHeaderState)
+      : null;
   const claudeReset = useClaudeResetGrants(
     file,
-    entry.type === 'claude' && status !== 'idle',
+    entry.type === 'claude' && status !== 'idle' && !setupToken,
     !canRefresh || loading || resetting,
     quota,
     onRefresh
@@ -102,7 +116,7 @@ export function QuotaCard(props: QuotaCardProps) {
     quota?.error || t('common.unknown_error')
   );
   // Claude banked resets join the plan chip row; their expiry list follows it.
-  const showClaudeReset = entry.type === 'claude' && status === 'success';
+  const showClaudeReset = entry.type === 'claude' && status === 'success' && !setupToken;
   const claudePlanItems = showClaudeReset ? (
     <span className={quotaClasses.codexPlanItem}>
       <span className={quotaClasses.codexPlanLabel}>{t('claude_reset.remaining')}</span>
@@ -181,7 +195,21 @@ export function QuotaCard(props: QuotaCardProps) {
       </header>
 
       <div className={styles.body}>
-        {status === 'idle' ? (
+        {claudeDisplay ? (
+          <>
+            {loading && (
+              <div role="status" aria-busy="true" className={quotaClasses.quotaMessage}>
+                {t(`${adapter.i18nPrefix}.loading`)}
+              </div>
+            )}
+            <adapter.Body
+              quota={claudeDisplay}
+              classes={quotaClasses}
+              planItems={claudePlanItems}
+              afterPlan={claudeAfterPlan}
+            />
+          </>
+        ) : status === 'idle' ? (
           <button
             type="button"
             className={styles.idleBody}
@@ -191,7 +219,7 @@ export function QuotaCard(props: QuotaCardProps) {
             <IconRefreshCw size={15} aria-hidden="true" className={styles.idleGlyph} />
             <span className={styles.idleHint}>{t(`${adapter.i18nPrefix}.idle`)}</span>
           </button>
-        ) : loading && !retainedClaudeUsage ? (
+        ) : loading ? (
           <div className={styles.skeleton} aria-busy="true">
             <span className={styles.srOnly}>{t(`${adapter.i18nPrefix}.loading`)}</span>
             {[0, 1].map((row) => (
@@ -205,34 +233,21 @@ export function QuotaCard(props: QuotaCardProps) {
           <div className={styles.errorStrip} role="alert">
             {t(`${adapter.i18nPrefix}.load_failed`, { message: errorMessage })}
           </div>
-        ) : quota && !retainedClaudeUsage ? (
+        ) : quota ? (
           <adapter.Body
             quota={quota}
             classes={quotaClasses}
             planItems={claudePlanItems}
             afterPlan={entry.type === 'codex' ? codexAfterPlan : claudeAfterPlan}
           />
-        ) : !retainedClaudeUsage ? (
+        ) : (
           <div className={styles.idleHint}>{t(`${adapter.i18nPrefix}.idle`)}</div>
-        ) : null}
-        {loading && retainedClaudeUsage && (
-          <div role="status" aria-busy="true" className={quotaClasses.quotaMessage}>
-            {t(`${adapter.i18nPrefix}.loading`)}
-          </div>
-        )}
-        {retainedClaudeUsage && quota && (
-          <adapter.Body
-            quota={quota}
-            classes={quotaClasses}
-            planItems={claudePlanItems}
-            afterPlan={claudeAfterPlan}
-          />
         )}
       </div>
 
-      {status !== 'idle' && !glance && (
+      {(status !== 'idle' || claudeDisplay) && !glance && (
         <footer className={styles.actionRow}>
-          {entry.type === 'claude' && (
+          {entry.type === 'claude' && !setupToken && status !== 'idle' && (
             <button
               type="button"
               className={styles.actionPill}

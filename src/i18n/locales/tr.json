@@ -517,6 +517,7 @@
     "stale_snapshot": "Yenileme Başarısız. Son Başarılı Kontrol Gösteriliyor: {{time}}",
     "source_label": "Kaynak",
     "source_headers": "yanıt başlıkları, {{time}}",
+    "no_header_data": "Henüz yanıt verisi yok",
     "plan_label": "Plan",
     "plan_unknown": "Bilinmiyor",
     "plan_free": "Ücretsiz",

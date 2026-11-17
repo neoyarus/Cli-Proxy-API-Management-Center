@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { I18nextProvider } from 'react-i18next';
@@ -7,6 +8,9 @@ import { apiCallApi, type ApiCallResult } from '@/services/api/apiCall';
 import { authFilesApi } from '@/services/api/authFiles';
 import {
   CLAUDE_CONFIG,
+  claudeHeaderQuotaState,
+  isClaudeSetupTokenFile,
+  pickLatestClaudeState,
   readClaudeHeaderSnapshot,
 } from '@/features/quota/providers/claude/data';
 import { ClaudeQuotaBody } from '@/features/quota/providers/claude/ClaudeQuotaBody';
@@ -164,5 +168,91 @@ describe('Claude quota from response headers', () => {
       )
     );
     expect(live).not.toContain('data-quota-source');
+  });
+});
+
+describe('setup tokens and newest-data display', () => {
+  const setupFile = (fiveHour: string, sevenDay: string, observedAt?: string) =>
+    ({ ...headerFile(fiveHour, sevenDay, observedAt), setup_token: true }) as unknown as AuthFileItem;
+
+  test('recognizes the setup_token flag from the credential list', () => {
+    expect(isClaudeSetupTokenFile(setupFile('0.1', '0.2'))).toBe(true);
+    expect(isClaudeSetupTokenFile(headerFile('0.1', '0.2'))).toBe(false);
+  });
+
+  test('setup tokens never call the usage API and read the newest header snapshot', async () => {
+    const requests: unknown[] = [];
+    apiCallApi.request = async (request) => {
+      requests.push(request);
+      return result(200, null);
+    };
+    authFilesApi.list = async () => ({
+      files: [setupFile('0.30', '0.40', '2026-11-17T09:59:50Z')],
+      total: 1,
+    });
+    const data = await CLAUDE_CONFIG.fetchQuota(setupFile('0.10', '0.20'), translations.t);
+    expect(requests).toEqual([]);
+    expect(data.source).toBe('headers');
+    expect(data.windows.map((window) => window.usedPercent)).toEqual([30, 40]);
+  });
+
+  test('a setup token without any response data reports that, still without a usage request', async () => {
+    let requested = false;
+    apiCallApi.request = async () => {
+      requested = true;
+      return result(200, null);
+    };
+    authFilesApi.list = async () => ({ files: [], total: 0 });
+    const file = { name: 'claude-new.json', type: 'claude', setup_token: true } as unknown as AuthFileItem;
+    await expect(CLAUDE_CONFIG.fetchQuota(file, translations.t)).rejects.toThrow(
+      'No response data yet'
+    );
+    expect(requested).toBe(false);
+  });
+
+  test('cards build their default view from the header snapshot', () => {
+    const state = claudeHeaderQuotaState(headerFile('0.44', '0.87'), translations.t, NOW)!;
+    expect(state.status).toBe('success');
+    expect(state.source).toBe('headers');
+    expect(state.windows.map((window) => window.usedPercent)).toEqual([44, 87]);
+    expect(claudeHeaderQuotaState({ name: 'x', type: 'claude' } as AuthFileItem, translations.t)).toBeNull();
+  });
+
+  test('the newer of the stored reading and the header snapshot is shown', () => {
+    const header = claudeHeaderQuotaState(headerFile('0.44', '0.87', '2026-11-17T09:58:00Z'), translations.t, NOW)!;
+    const olderLive: ClaudeQuotaState = {
+      status: 'success',
+      windows: [],
+      observedAt: '2026-11-17T08:00:00Z',
+      source: 'live',
+    };
+    const newerLive: ClaudeQuotaState = { ...olderLive, observedAt: '2026-11-17T09:59:00Z' };
+    expect(pickLatestClaudeState(olderLive, header)).toBe(header);
+    expect(pickLatestClaudeState(newerLive, header)).toBe(newerLive);
+    expect(pickLatestClaudeState(undefined, header)).toBe(header);
+    expect(pickLatestClaudeState(newerLive, null)).toBe(newerLive);
+    // Nothing stored yet and no header data: the card falls back to its load prompt.
+    expect(pickLatestClaudeState({ status: 'idle', windows: [] }, null)).toBeNull();
+    // A failed refresh without retained data does not hide the header snapshot.
+    expect(pickLatestClaudeState({ status: 'error', windows: [], error: 'x' }, header)).toBe(header);
+  });
+
+  test('cards show the newest data by default and keep refresh among the actions', () => {
+    const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+    const quotaCard = read('src/features/quota/components/QuotaCard.tsx');
+    expect(quotaCard).toContain('pickLatestClaudeState(quota as ClaudeQuotaState | undefined, claudeHeaderState)');
+    expect(quotaCard).toContain("{(status !== 'idle' || claudeDisplay) && !glance && (");
+    expect(quotaCard).toContain("entry.type === 'claude' && status !== 'idle' && !setupToken,");
+    expect(quotaCard).toContain("{entry.type === 'claude' && !setupToken && status !== 'idle' && (");
+
+    const section = read('src/features/authFiles/components/AuthFileQuotaSection.tsx');
+    expect(section).toContain('pickLatestClaudeState(quota as ClaudeQuotaState | undefined, claudeHeaderState)');
+    expect(section).not.toContain("t('auth_files.quota_refresh_single')");
+
+    const authCard = read('src/features/authFiles/components/AuthFileCard.tsx');
+    const footer = authCard.split('<footer')[1].split('</footer>')[0];
+    expect(footer).toContain('onClick={() => void quota.refresh()}');
+    expect(footer).toContain('<IconSidebarQuota size={15} />');
+    expect(footer).toContain("title={t('auth_files.quota_refresh_single')}");
   });
 });

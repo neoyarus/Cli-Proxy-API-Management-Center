@@ -502,6 +502,7 @@
     "stale_snapshot": "刷新失败。显示上次成功检查的结果：{{time}}",
     "source_label": "来源",
     "source_headers": "响应头，{{time}}",
+    "no_header_data": "暂无响应数据",
     "plan_label": "套餐",
     "plan_unknown": "未知",
     "plan_free": "Free",
