@@ -26,7 +26,10 @@ describe('window pace', () => {
     expect(windowPace(40, reset, 5, NOW)?.pace).toBe('ahead');
     expect(windowPace(10, reset, 5, NOW)?.pace).toBe('under');
     // Weekly window with 2.5 days left: 64% elapsed.
-    expect(windowPace(5, NOW + 60 * HOUR, 168, NOW)).toEqual({ windowLeftPercent: 36, pace: 'under' });
+    expect(windowPace(5, NOW + 60 * HOUR, 168, NOW)).toEqual({
+      windowLeftPercent: 36,
+      pace: 'under',
+    });
   });
 
   test('gives no pace without a future reset or a known window length', () => {
@@ -42,18 +45,29 @@ describe('window pace', () => {
     expect(plain.startsWith('<div class="quotaBar">')).toBe(true);
 
     const paced = renderToStaticMarkup(
-      createElement(QuotaMeter, { percent: 69, classes, paceLeftPercent: 64, paceTitle: '64% of the window left' })
+      createElement(QuotaMeter, {
+        percent: 69,
+        classes,
+        paceLeftPercent: 64,
+        paceTitle: '64% of the window left',
+      })
     );
     expect(paced).toContain('class="quotaMeter" title="64% of the window left"');
     expect(paced).toContain('class="quotaPaceTick" style="left:clamp(3px, 64%, calc(100% - 3px))"');
-    expect(paced).toContain('mask-image:linear-gradient(to right, #000 calc(clamp(3px, 64%, calc(100% - 3px)) - 3px)');
+    expect(paced).toContain(
+      'mask-image:linear-gradient(to right, #000 calc(clamp(3px, 64%, calc(100% - 3px)) - 3px)'
+    );
   });
 });
 
 describe('Claude quota card', () => {
   const render = (state: ClaudeQuotaState) =>
     renderToStaticMarkup(
-      createElement(I18nextProvider, { i18n: translations }, createElement(ClaudeQuotaBody, { quota: state, classes }))
+      createElement(
+        I18nextProvider,
+        { i18n: translations },
+        createElement(ClaudeQuotaBody, { quota: state, classes })
+      )
     );
 
   test('shows the pace arrow and tick, and the source line under the limits', () => {
@@ -85,7 +99,9 @@ describe('Claude quota card', () => {
     expect(html).toContain('data-quota-pace="ahead"');
     expect(html).toContain('aria-label="Ahead of pace: spending faster than the window elapses"');
     expect(html.match(/class="quotaPaceTick"/g)?.length).toBe(2);
-    expect(html.indexOf('data-quota-source="headers"')).toBeGreaterThan(html.lastIndexOf('quotaPaceTick'));
+    expect(html.indexOf('data-quota-source="headers"')).toBeGreaterThan(
+      html.lastIndexOf('quotaPaceTick')
+    );
   });
 });
 
@@ -98,6 +114,8 @@ describe('auth file card header', () => {
     const header = card.split('<h3 className={styles.identity}>')[1].split('</h3>')[0];
     expect(header).toContain('{providerIcon ? (');
     expect(header).toContain('<img src={providerIcon} alt={typeLabel} />');
-    expect(header.indexOf('styles.providerIcon')).toBeLessThan(header.indexOf('styles.providerBadge'));
+    expect(header.indexOf('styles.providerIcon')).toBeLessThan(
+      header.indexOf('styles.providerBadge')
+    );
   });
 });
