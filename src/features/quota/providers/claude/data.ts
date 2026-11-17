@@ -14,7 +14,7 @@ import type {
   ClaudeUsageWindow,
   ClaudeUsagePayload,
 } from '@/types';
-import { apiCallApi, getApiCallErrorMessage } from '@/services/api';
+import { apiCallApi, authFilesApi, getApiCallErrorMessage } from '@/services/api';
 import { normalizeClaudeUsageSnapshot } from '@/services/api/claudeUsage';
 import {
   CLAUDE_PROFILE_URL,
@@ -40,7 +40,72 @@ export type ClaudeQuotaData = {
   planType?: string | null;
   dollarWindows: ClaudeDollarWindow[];
   observedAt: string;
+  /** 'headers' when the usage API failed and the proxy's response-header snapshot is shown. */
+  source?: 'live' | 'headers';
 };
+
+/** Rate-limit headers CPA keeps per credential (auth file `quota.signals`), by usage-API key. */
+const CLAUDE_HEADER_WINDOWS = [
+  { key: 'five_hour', prefix: 'anthropic-ratelimit-unified-5h-', periodMs: 5 * 3600 * 1000 },
+  { key: 'seven_day', prefix: 'anthropic-ratelimit-unified-7d-', periodMs: 7 * 24 * 3600 * 1000 },
+] as const;
+
+export type ClaudeHeaderSnapshot = { payload: ClaudeUsagePayload; observedAt: string };
+
+/**
+ * Usage windows from the rate-limit headers of the credential's latest response, which
+ * CPA exposes as the auth file's `quota` ({observed_at, signals}). This needs no request,
+ * so it also covers credentials whose token cannot call the usage API (setup tokens are
+ * inference-only). A reset already in the past means the window restarted since the
+ * snapshot: usage is shown as 0 and the reset moves forward by whole periods.
+ */
+export const readClaudeHeaderSnapshot = (
+  file: AuthFileItem,
+  nowMs: number = Date.now()
+): ClaudeHeaderSnapshot | null => {
+  const quota = (file as Record<string, unknown>).quota;
+  if (!quota || typeof quota !== 'object') return null;
+  const { signals, observed_at: observedRaw } = quota as { signals?: unknown; observed_at?: unknown };
+  if (!signals || typeof signals !== 'object') return null;
+  const byName = new Map(
+    Object.entries(signals as Record<string, unknown>).map(([name, value]) => [name.toLowerCase(), value])
+  );
+  const readNumber = (name: string): number | null => {
+    const value = byName.get(name);
+    const parsed = typeof value === 'number' ? value : typeof value === 'string' ? Number(value.trim()) : NaN;
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const payload: ClaudeUsagePayload = {};
+  for (const { key, prefix, periodMs } of CLAUDE_HEADER_WINDOWS) {
+    const utilization = readNumber(`${prefix}utilization`);
+    if (utilization === null) continue;
+    let usedPercent = Math.min(100, Math.max(0, utilization * 100));
+    const resetSeconds = readNumber(`${prefix}reset`);
+    let resetMs = resetSeconds !== null && resetSeconds > 0 ? resetSeconds * 1000 : null;
+    if (resetMs !== null && resetMs <= nowMs) {
+      usedPercent = 0;
+      resetMs += (Math.floor((nowMs - resetMs) / periodMs) + 1) * periodMs;
+    }
+    payload[key] = {
+      utilization: usedPercent,
+      resets_at: resetMs !== null ? new Date(resetMs).toISOString() : null,
+    };
+  }
+  if (!payload.five_hour && !payload.seven_day) return null;
+
+  const observedMs = typeof observedRaw === 'string' ? Date.parse(observedRaw) : NaN;
+  return { payload, observedAt: Number.isFinite(observedMs) ? new Date(observedMs).toISOString() : '' };
+};
+
+const claudeQuotaFromHeaders = (snapshot: ClaudeHeaderSnapshot, t: TFunction): ClaudeQuotaData => ({
+  windows: buildClaudeQuotaWindows(snapshot.payload, t),
+  extraUsage: null,
+  dollarWindows: [],
+  observedAt: snapshot.observedAt,
+  planType: null,
+  source: 'headers',
+});
 
 export const hasClaudeUsageData = (quota?: ClaudeQuotaState): boolean =>
   Boolean(
@@ -205,7 +270,32 @@ export const resolveClaudePlanType = (profile: ClaudeProfileResponse | null): st
   return null;
 };
 
+/**
+ * Live usage from the usage API; when that fails (e.g. a setup token lacks the scope),
+ * fall back to the proxy's snapshot of the latest response's rate-limit headers.
+ */
 const fetchClaudeQuota = async (file: AuthFileItem, t: TFunction): Promise<ClaudeQuotaData> => {
+  try {
+    return await fetchLiveClaudeQuota(file, t);
+  } catch (err) {
+    const snapshot = readClaudeHeaderSnapshot(await latestAuthFile(file)) ?? readClaudeHeaderSnapshot(file);
+    if (snapshot) return claudeQuotaFromHeaders(snapshot, t);
+    throw err;
+  }
+};
+
+/** The credential as CPA reports it now, so the header snapshot is the newest one. */
+const latestAuthFile = async (file: AuthFileItem): Promise<AuthFileItem> => {
+  try {
+    const authIndex = normalizeAuthIndex(file['auth_index'] ?? file.authIndex) ?? undefined;
+    const { files } = await authFilesApi.list({ name: file.name, authIndex });
+    return files.find((entry) => entry.name === file.name) ?? file;
+  } catch {
+    return file;
+  }
+};
+
+const fetchLiveClaudeQuota = async (file: AuthFileItem, t: TFunction): Promise<ClaudeQuotaData> => {
   const rawAuthIndex = file['auth_index'] ?? file.authIndex;
   const authIndex = normalizeAuthIndex(rawAuthIndex);
   if (!authIndex) {
@@ -268,6 +358,7 @@ const fetchClaudeQuota = async (file: AuthFileItem, t: TFunction): Promise<Claud
     dollarWindows,
     observedAt: new Date().toISOString(),
     planType,
+    source: 'live',
   };
 };
 
@@ -286,6 +377,7 @@ export const CLAUDE_CONFIG: QuotaProviderData<ClaudeQuotaState, ClaudeQuotaData>
     planType: data.planType,
     dollarWindows: data.dollarWindows,
     observedAt: data.observedAt,
+    source: data.source,
     stale: false,
   }),
   buildErrorState: (message, status) => ({

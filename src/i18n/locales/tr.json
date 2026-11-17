@@ -515,6 +515,8 @@
     "balance_reset": "Sıfırlanır",
     "balance_reset_unknown": "Sağlanmadı",
     "stale_snapshot": "Yenileme Başarısız. Son Başarılı Kontrol Gösteriliyor: {{time}}",
+    "source_label": "Kaynak",
+    "source_headers": "yanıt başlıkları, {{time}}",
     "plan_label": "Plan",
     "plan_unknown": "Bilinmiyor",
     "plan_free": "Ücretsiz",

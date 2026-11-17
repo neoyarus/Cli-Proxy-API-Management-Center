@@ -218,6 +218,8 @@ export interface ClaudeQuotaState {
   extraUsage?: ClaudeExtraUsage | null;
   dollarWindows?: ClaudeDollarWindow[];
   observedAt?: string | null;
+  /** 'headers': windows come from the proxy's snapshot of response rate-limit headers. */
+  source?: 'live' | 'headers';
   stale?: boolean;
   planType?: string | null;
   error?: string;
