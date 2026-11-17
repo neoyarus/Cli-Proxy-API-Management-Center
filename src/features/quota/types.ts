@@ -50,6 +50,10 @@ export interface QuotaClassMap {
   quotaBarFillHigh: string;
   quotaBarFillMedium: string;
   quotaBarFillLow: string;
+  // Pace: tick on the bar and the arrow beside the reset time.
+  quotaMeter: string;
+  quotaPaceTick: string;
+  quotaPace: string;
 }
 
 export const QUOTA_CLASS_KEYS: readonly (keyof QuotaClassMap)[] = [
@@ -86,6 +90,9 @@ export const QUOTA_CLASS_KEYS: readonly (keyof QuotaClassMap)[] = [
   'quotaBarFillHigh',
   'quotaBarFillMedium',
   'quotaBarFillLow',
+  'quotaMeter',
+  'quotaPaceTick',
+  'quotaPace',
 ];
 
 /** 宿主 CSS Module → 类型化契约。缺键即抛（fail-loud），`source` 用于报错定位。 */

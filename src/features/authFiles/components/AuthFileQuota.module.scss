@@ -198,6 +198,29 @@ button.quotaMessageAction {
   background: var(--viz-failure);
 }
 
+/* Pace (QuotaMeter tick + QuotaPaceIcon): the tick marks how much of the window's time is
+ * left, so a fill reaching past it is under pace; the bar is cut open around it. */
+.quotaMeter {
+  position: relative;
+}
+
+.quotaPaceTick {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  transform: translateX(-50%);
+  border-radius: $radius-full;
+  background: var(--text-primary);
+  pointer-events: none;
+}
+
+.quotaPace {
+  display: inline-flex;
+  align-self: center;
+  color: var(--text-tertiary);
+}
+
 /* ---------- 计划徽章（codexPlan*：antigravity/claude/xai 复用） ---------- */
 
 .codexPlan {

@@ -10,6 +10,8 @@ import { useNow } from '@/hooks/useNow';
 import { planValueClassForTier, resolveClaudeCardTier } from '../../cardTier';
 import { QuotaMeter } from '../../components/QuotaMeter';
 import { QuotaResetLabel } from '../../components/QuotaResetLabel';
+import { QuotaPaceIcon } from '../../components/QuotaPaceIcon';
+import { windowPace } from '../../pace';
 import { collectQuotaRowInstants, pickUrgentRowId } from '../../resetSchedule';
 import type { QuotaBodyProps } from '../../types';
 
@@ -67,17 +69,6 @@ export function ClaudeQuotaBody({
           {t('claude_quota.stale_snapshot', {
             time: quota.observedAt ? new Date(quota.observedAt).toLocaleString(language) : '--',
           })}
-        </div>
-      )}
-      {fromHeaders && (
-        // Plain muted text, not a chip: it notes where the numbers came from.
-        <div className={classes.codexPlan}>
-          <span className={classes.codexPlanLabel} data-quota-source="headers">
-            {t('claude_quota.source_label')}{' '}
-            {t('claude_quota.source_headers', {
-              time: quota.observedAt ? new Date(quota.observedAt).toLocaleString(language) : '--',
-            })}
-          </span>
         </div>
       )}
       {(planType || planItems) && (
@@ -189,6 +180,7 @@ export function ClaudeQuotaBody({
           );
 
           const soon = window.id === soonestRowId;
+          const pace = windowPace(clampedUsed, window.resetAtMs, window.periodHours, now);
 
           return (
             <div
@@ -200,15 +192,37 @@ export function ClaudeQuotaBody({
                 <span className={classes.quotaModel}>{windowLabel}</span>
                 <div className={classes.quotaMeta}>
                   <span className={classes.quotaPercent}>{percentLabel}</span>
+                  {pace?.pace && <QuotaPaceIcon pace={pace.pace} classes={classes} />}
                   {resetDisplay && (
                     <QuotaResetLabel display={resetDisplay} classes={classes} soon={soon} />
                   )}
                 </div>
               </div>
-              <QuotaMeter percent={remaining} classes={classes} index={index} />
+              <QuotaMeter
+                percent={remaining}
+                classes={classes}
+                index={index}
+                paceLeftPercent={pace?.windowLeftPercent ?? null}
+                paceTitle={
+                  pace
+                    ? t('quota_management.pace_window_left', { percent: pace.windowLeftPercent })
+                    : undefined
+                }
+              />
             </div>
           );
         })
+      )}
+      {fromHeaders && (
+        // Plain muted text under the limits: it notes where the numbers came from.
+        <div className={classes.codexPlan}>
+          <span className={classes.codexPlanLabel} data-quota-source="headers">
+            {t('claude_quota.source_label')}{' '}
+            {t('claude_quota.source_headers', {
+              time: quota.observedAt ? new Date(quota.observedAt).toLocaleString(language) : '--',
+            })}
+          </span>
+        </div>
       )}
     </>
   );
