@@ -26,7 +26,14 @@ const classes = bindQuotaClasses(
 const NOW = Date.parse('2026-11-17T10:00:00Z');
 const unix = (iso: string) => String(Date.parse(iso) / 1000);
 
-const headerFile = (fiveHour: string, sevenDay: string, observedAt = '2026-11-17T09:58:00Z') =>
+// Fixed resets suit tests that pass NOW. Code paths that read the real clock (fetchQuota)
+// need liveHeaderFile, whose resets stay in the future whenever the suite runs.
+const headerFile = (
+  fiveHour: string,
+  sevenDay: string,
+  observedAt = '2026-11-17T09:58:00Z',
+  resets = { fiveHour: unix('2026-11-17T12:00:00Z'), sevenDay: unix('2026-11-18T20:00:00Z') }
+) =>
   ({
     name: 'claude-setup.json',
     type: 'claude',
@@ -35,13 +42,18 @@ const headerFile = (fiveHour: string, sevenDay: string, observedAt = '2026-11-17
       observed_at: observedAt,
       signals: {
         'Anthropic-Ratelimit-Unified-5h-Utilization': fiveHour,
-        'Anthropic-Ratelimit-Unified-5h-Reset': unix('2026-11-17T12:00:00Z'),
+        'Anthropic-Ratelimit-Unified-5h-Reset': resets.fiveHour,
         'Anthropic-Ratelimit-Unified-7d-Utilization': sevenDay,
-        'Anthropic-Ratelimit-Unified-7d-Reset': unix('2026-11-18T20:00:00Z'),
+        'Anthropic-Ratelimit-Unified-7d-Reset': resets.sevenDay,
         'Anthropic-Ratelimit-Unified-7d-Status': 'allowed_warning',
       },
     },
   }) as unknown as AuthFileItem;
+const liveHeaderFile = (fiveHour: string, sevenDay: string, observedAt = '2026-11-17T09:58:00Z') =>
+  headerFile(fiveHour, sevenDay, observedAt, {
+    fiveHour: String(Math.floor(Date.now() / 1000) + 2 * 3600),
+    sevenDay: String(Math.floor(Date.now() / 1000) + 30 * 3600),
+  });
 
 const result = (statusCode: number, body: unknown): ApiCallResult => ({
   statusCode,
@@ -100,10 +112,10 @@ describe('Claude quota from response headers', () => {
     const lookups: unknown[] = [];
     authFilesApi.list = async (lookup) => {
       lookups.push(lookup);
-      return { files: [headerFile('0.10', '0.20', '2026-11-17T09:59:30Z')], total: 1 };
+      return { files: [liveHeaderFile('0.10', '0.20', '2026-11-17T09:59:30Z')], total: 1 };
     };
 
-    const data = await CLAUDE_CONFIG.fetchQuota(headerFile('0.44', '0.87'), translations.t);
+    const data = await CLAUDE_CONFIG.fetchQuota(liveHeaderFile('0.44', '0.87'), translations.t);
     expect(lookups).toEqual([{ name: 'claude-setup.json', authIndex: 'idx-setup' }]);
     expect(data.source).toBe('headers');
     expect(data.observedAt).toBe('2026-11-17T09:59:30.000Z');
@@ -120,7 +132,7 @@ describe('Claude quota from response headers', () => {
     authFilesApi.list = async () => {
       throw new Error('offline');
     };
-    const data = await CLAUDE_CONFIG.fetchQuota(headerFile('0.44', '0.87'), translations.t);
+    const data = await CLAUDE_CONFIG.fetchQuota(liveHeaderFile('0.44', '0.87'), translations.t);
     expect(data.source).toBe('headers');
     expect(data.windows.map((window) => window.usedPercent)).toEqual([44, 87]);
   });
@@ -137,7 +149,7 @@ describe('Claude quota from response headers', () => {
       request.url === CLAUDE_USAGE_URL
         ? result(200, { five_hour: { utilization: 12, resets_at: '2026-11-17T12:00:00Z' } })
         : result(200, null);
-    const data = await CLAUDE_CONFIG.fetchQuota(headerFile('0.44', '0.87'), translations.t);
+    const data = await CLAUDE_CONFIG.fetchQuota(liveHeaderFile('0.44', '0.87'), translations.t);
     expect(data.source).toBe('live');
     expect(CLAUDE_CONFIG.buildSuccessState(data).source).toBe('live');
   });
@@ -177,7 +189,7 @@ describe('Claude quota from response headers', () => {
 
 describe('setup tokens and newest-data display', () => {
   const setupFile = (fiveHour: string, sevenDay: string, observedAt?: string) =>
-    ({ ...headerFile(fiveHour, sevenDay, observedAt), setup_token: true }) as unknown as AuthFileItem;
+    ({ ...liveHeaderFile(fiveHour, sevenDay, observedAt), setup_token: true }) as unknown as AuthFileItem;
 
   test('recognizes the setup_token flag from the credential list', () => {
     expect(isClaudeSetupTokenFile(setupFile('0.1', '0.2'))).toBe(true);

@@ -159,6 +159,7 @@ export function AuthFilesPage() {
     handleDownload,
     handleManualRefresh,
     handleCooldownReset,
+    handleManualCooldown,
     handleStatusToggle,
     toggleSelect,
     selectAllVisible,
@@ -596,6 +597,7 @@ export function AuthFilesPage() {
       onDownload={handleDownload}
       onManualRefresh={handleManualRefresh}
       onCooldownReset={handleCooldownReset}
+      onManualCooldown={handleManualCooldown}
       onOpenPrefixProxyEditor={openPrefixProxyEditor}
       onDelete={handleDelete}
       onToggleStatus={handleStatusToggle}

@@ -1,4 +1,6 @@
 import { useState, type CSSProperties } from 'react';
+import { useNow } from '@/hooks/useNow';
+import { readManualCooldownUntil, type ManualCooldownRequest } from '@/services/api/authFiles';
 import { getAuthFileRefreshKey } from '@/features/authFiles/manualRefresh';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
@@ -12,6 +14,7 @@ import {
   IconRefreshCw,
   IconSettings,
   IconSidebarQuota,
+  IconTimer,
   IconTrash2,
 } from '@/components/ui/icons';
 import { ProviderStatusBar } from '@/components/providers/ProviderStatusBar';
@@ -38,6 +41,7 @@ import {
   useAuthFileQuota,
 } from '@/features/authFiles/components/AuthFileQuotaSection';
 import { AuthFileCooldownSection } from './AuthFileCooldownSection';
+import { AuthFileCooldownDialog } from './AuthFileCooldownDialog';
 import { getSiwcBindingStatus, supportsSiwcBinding } from '@/features/oauth/siwcBinding';
 import { SiwcStatusBadge } from '@/features/oauth/components/SiwcStatusBadge';
 import styles from './AuthFileCard.module.scss';
@@ -60,6 +64,8 @@ export type AuthFileCardProps = {
   onDownload: (name: string) => void;
   onManualRefresh: (file: AuthFileItem) => void;
   onCooldownReset: (file: AuthFileItem) => void;
+  /** Pause the credential until a time, or resume it with null. */
+  onManualCooldown: (file: AuthFileItem, pause: ManualCooldownRequest | null) => Promise<void>;
   onOpenPrefixProxyEditor: (file: AuthFileItem) => void;
   onDelete: (name: string) => void;
   onToggleStatus: (file: AuthFileItem, enabled: boolean) => void;
@@ -85,6 +91,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
     onDownload,
     onManualRefresh,
     onCooldownReset,
+    onManualCooldown,
     onOpenPrefixProxyEditor,
     onDelete,
     onToggleStatus,
@@ -103,6 +110,19 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const quotaType = resolveAuthFileQuotaType(file, quotaFilterType);
   const showQuotaLayout = Boolean(quotaType) && !isRuntimeOnly && !compact;
   const quota = useAuthFileQuota(file, showQuotaLayout ? quotaType : null, disableControls);
+  const now = useNow(Boolean(file['cooldown_until']));
+  const cooldownUntil = readManualCooldownUntil(file, now);
+  const [cooldownDialogOpen, setCooldownDialogOpen] = useState(false);
+  const [cooldownBusy, setCooldownBusy] = useState(false);
+  const changeCooldown = async (pause: ManualCooldownRequest | null) => {
+    setCooldownBusy(true);
+    try {
+      await onManualCooldown(file, pause);
+      setCooldownDialogOpen(false);
+    } finally {
+      setCooldownBusy(false);
+    }
+  };
 
   const successCount = file.successCount ?? 0;
   const failureCount = file.failureCount ?? 0;
@@ -269,6 +289,14 @@ export function AuthFileCard(props: AuthFileCardProps) {
 
       {quota && <AuthFileQuotaSection controller={quota} />}
 
+      {cooldownUntil !== null && (
+        <div className={styles.manualCooldown} data-manual-cooldown="">
+          {t('auth_files.manual_cooldown_active', {
+            time: new Date(cooldownUntil).toLocaleString(i18n.resolvedLanguage),
+          })}
+        </div>
+      )}
+
       <footer className={styles.actions}>
         <div className={styles.actionsMain}>
           {showModelsButton && (
@@ -345,6 +373,30 @@ export function AuthFileCard(props: AuthFileCardProps) {
                   {quota.loading ? <LoadingSpinner size={14} /> : <IconSidebarQuota size={15} />}
                 </Button>
               )}
+              {!file.disabled && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() =>
+                    cooldownUntil !== null ? void changeCooldown(null) : setCooldownDialogOpen(true)
+                  }
+                  className={styles.iconButton}
+                  title={t(
+                    cooldownUntil !== null
+                      ? 'auth_files.manual_cooldown_resume'
+                      : 'auth_files.manual_cooldown_button'
+                  )}
+                  aria-label={t(
+                    cooldownUntil !== null
+                      ? 'auth_files.manual_cooldown_resume'
+                      : 'auth_files.manual_cooldown_button'
+                  )}
+                  aria-pressed={cooldownUntil !== null}
+                  disabled={disableControls || cooldownBusy}
+                >
+                  {cooldownBusy ? <LoadingSpinner size={14} /> : <IconTimer size={15} />}
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -364,6 +416,15 @@ export function AuthFileCard(props: AuthFileCardProps) {
           </div>
         )}
       </footer>
+      {cooldownDialogOpen && (
+        <AuthFileCooldownDialog
+          open={cooldownDialogOpen}
+          file={file}
+          busy={cooldownBusy}
+          onConfirm={(pause) => void changeCooldown(pause)}
+          onClose={() => setCooldownDialogOpen(false)}
+        />
+      )}
     </article>
   );
 }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { apiClient, authFilesApi } from '@/services/api';
-import type { AuthFileRefreshResult } from '@/services/api/authFiles';
+import type { AuthFileRefreshResult, ManualCooldownRequest } from '@/services/api/authFiles';
 import { getAuthFileRefreshKey } from '@/features/authFiles/manualRefresh';
 import { notifyAuthFilesChanged } from '@/features/authFiles/authFilesEvents';
 import { useNotificationStore } from '@/stores';
@@ -65,6 +65,8 @@ export type UseAuthFilesDataResult = {
   handleDownload: (name: string) => Promise<void>;
   handleManualRefresh: (item: AuthFileItem) => Promise<void>;
   handleCooldownReset: (item: AuthFileItem) => void;
+  /** Pause a credential (or resume it with null) via the manual cooldown endpoint. */
+  handleManualCooldown: (item: AuthFileItem, pause: ManualCooldownRequest | null) => Promise<void>;
   handleStatusToggle: (item: AuthFileItem, enabled: boolean) => Promise<void>;
   toggleSelect: (name: string) => void;
   selectAllVisible: (visibleFiles: AuthFileItem[]) => void;
@@ -675,6 +677,37 @@ export function useAuthFilesData(options?: UseAuthFilesDataOptions): UseAuthFile
     [invalidateInFlightLoads, loadFiles, showConfirmation, showNotification, t]
   );
 
+  const handleManualCooldown = useCallback(
+    async (item: AuthFileItem, pause: ManualCooldownRequest | null) => {
+      const connectionRevision = apiClient.getConnectionRevision();
+      const authIndex = String(item.authIndex ?? '').trim() || undefined;
+      try {
+        const result = await authFilesApi.setManualCooldown(item.name, authIndex, pause);
+        if (connectionRevision !== apiClient.getConnectionRevision()) return;
+        const until = result?.cooldown_until || '';
+        invalidateInFlightLoads();
+        setFiles((prev) =>
+          prev.map((file) => (file.name === item.name ? { ...file, cooldown_until: until } : file))
+        );
+        showNotification(
+          until
+            ? t('auth_files.manual_cooldown_set', {
+                name: item.name,
+                time: new Date(until).toLocaleString(),
+              })
+            : t('auth_files.manual_cooldown_cleared', { name: item.name }),
+          'success'
+        );
+        await loadFiles({ background: true });
+      } catch (err: unknown) {
+        if (connectionRevision !== apiClient.getConnectionRevision()) return;
+        const message = err instanceof Error ? err.message : t('notification.update_failed');
+        showNotification(t('auth_files.manual_cooldown_failed', { name: item.name, message }), 'error');
+      }
+    },
+    [invalidateInFlightLoads, loadFiles, showNotification, t]
+  );
+
   const handleStatusToggle = useCallback(
     async (item: AuthFileItem, enabled: boolean) => {
       const revision = apiClient.getConnectionRevision();
@@ -969,6 +1002,7 @@ export function useAuthFilesData(options?: UseAuthFilesDataOptions): UseAuthFile
     handleDownload,
     handleManualRefresh,
     handleCooldownReset,
+    handleManualCooldown,
     handleStatusToggle,
     toggleSelect,
     selectAllVisible,
