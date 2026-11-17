@@ -517,6 +517,7 @@
     "stale_snapshot": "Làm mới thất bại. Hiển thị lần kiểm tra thành công gần nhất: {{time}}",
     "source_label": "Nguồn",
     "source_headers": "header phản hồi, {{time}}",
+    "no_header_data": "Chưa có dữ liệu phản hồi",
     "plan_label": "Gói",
     "plan_unknown": "Không rõ",
     "plan_free": "Miễn phí",

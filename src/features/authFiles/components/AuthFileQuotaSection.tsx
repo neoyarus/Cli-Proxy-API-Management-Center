@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   captureQuotaCacheGeneration,
@@ -13,8 +13,15 @@ import { isRuntimeOnlyAuthFile, type QuotaProviderType } from '@/features/authFi
 import { Button } from '@/components/ui/Button';
 import { IconRefreshCw } from '@/components/ui/icons';
 import { bindQuotaClasses } from '@/features/quota/types';
-import { QUOTA_ADAPTERS, type QuotaCardState } from '@/features/quota/providers';
-import { hasClaudeUsageData } from '@/features/quota/providers/claude/data';
+import {
+  QUOTA_ADAPTERS,
+  type QuotaAdapter,
+  type QuotaCardState,
+} from '@/features/quota/providers';
+import {
+  claudeHeaderQuotaState,
+  pickLatestClaudeState,
+} from '@/features/quota/providers/claude/data';
 import styles from './AuthFileQuota.module.scss';
 
 /** Bind the auth-file host's compact styles to the quota rendering contract. */
@@ -28,22 +35,39 @@ type QuotaMapUpdater = (
   updater: (prev: Record<string, QuotaCardState>) => Record<string, QuotaCardState>
 ) => void;
 
-export type AuthFileQuotaSectionProps = {
+export type AuthFileQuotaController = {
   file: AuthFileItem;
   quotaType: QuotaProviderType;
-  disableControls: boolean;
+  adapter: QuotaAdapter;
+  quota: QuotaCardState | undefined;
+  status: QuotaCardState['status'];
+  loading: boolean;
+  canRefresh: boolean;
+  refresh: () => Promise<void>;
+  resetting: boolean;
+  canReset: boolean;
+  reset: () => void;
 };
 
-export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
-  const { file, quotaType, disableControls } = props;
+/**
+ * Quota state and actions for one auth-file card. The card shows the quota section and
+ * puts the refresh button in its own action row, so both share this controller.
+ * Returns null when the card has no quota section.
+ */
+export function useAuthFileQuota(
+  file: AuthFileItem,
+  quotaType: QuotaProviderType | null,
+  disableControls: boolean
+): AuthFileQuotaController | null {
   const { t } = useTranslation();
   const showNotification = useNotificationStore((state) => state.showNotification);
   const showConfirmation = useNotificationStore((state) => state.showConfirmation);
   const [resettingQuota, setResettingQuota] = useState(false);
-  const adapter = QUOTA_ADAPTERS[quotaType];
+  const adapter = quotaType ? QUOTA_ADAPTERS[quotaType] : null;
   const cacheKey = getQuotaCacheKey(file);
 
   const quota = useQuotaStore((state) => {
+    if (quotaType === null) return undefined;
     if (quotaType === 'antigravity')
       return state.antigravityQuota[cacheKey] as QuotaCardState | undefined;
     if (quotaType === 'claude') return state.claudeQuota[cacheKey] as QuotaCardState | undefined;
@@ -55,14 +79,13 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
     if (quotaType === 'xai') return state.xaiQuota[cacheKey] as QuotaCardState | undefined;
     return assertNever(quotaType);
   });
-  const retainedClaudeUsage =
-    quotaType === 'claude' && hasClaudeUsageData(quota as ClaudeQuotaState | undefined);
 
-  const updateQuotaState = useQuotaStore(
-    (state) => state[adapter.storeSetter] as unknown as QuotaMapUpdater
+  const updateQuotaState = useQuotaStore((state) =>
+    adapter ? (state[adapter.storeSetter] as unknown as QuotaMapUpdater) : null
   );
 
-  const refreshQuotaForFile = useCallback(async () => {
+  const refresh = useCallback(async () => {
+    if (!adapter || !updateQuotaState) return;
     if (disableControls) return;
     if (isRuntimeOnlyAuthFile(file)) return;
     if (file.disabled) return;
@@ -110,7 +133,8 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
     updateQuotaState,
   ]);
 
-  const resetQuotaForFile = useCallback(() => {
+  const reset = useCallback(() => {
+    if (!adapter || !updateQuotaState) return;
     if (disableControls) return;
     if (isRuntimeOnlyAuthFile(file)) return;
     if (file.disabled) return;
@@ -160,30 +184,59 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
     updateQuotaState,
   ]);
 
-  const quotaStatus = quota?.status ?? 'idle';
-  const canRefreshQuota = !disableControls && !file.disabled && !resettingQuota;
-  const canUseResetQuota = canRefreshQuota && quotaStatus !== 'loading';
-  // Idle state already renders a clickable "click to refresh" prompt; only offer the
-  // explicit refresh button once quota has been requested so it can be refreshed again.
-  const showRefreshQuotaAction = quotaStatus !== 'idle';
-  const showResetQuotaAction = quota !== undefined && Boolean(adapter.canResetQuota?.(quota));
-  const resetQuotaAction =
-    adapter.resetQuota && showResetQuotaAction ? (
-      <Button
-        type="button"
-        variant="secondary"
-        size="sm"
-        className={styles.quotaResetCreditButton}
-        onClick={() => resetQuotaForFile()}
-        disabled={!canUseResetQuota}
-        loading={resettingQuota}
-        title={t('codex_quota.reset_button')}
-        aria-label={t('codex_quota.reset_button')}
-      >
-        {!resettingQuota && <IconRefreshCw size={14} />}
-        {t('codex_quota.reset_button')}
-      </Button>
-    ) : undefined;
+  if (!quotaType || !adapter) return null;
+  const status = quota?.status ?? 'idle';
+  const canRefresh = !disableControls && !file.disabled && !resettingQuota;
+  return {
+    file,
+    quotaType,
+    adapter,
+    quota,
+    status,
+    loading: status === 'loading',
+    canRefresh,
+    refresh,
+    resetting: resettingQuota,
+    canReset: quota !== undefined && Boolean(adapter.resetQuota && adapter.canResetQuota?.(quota)),
+    reset,
+  };
+}
+
+export type AuthFileQuotaSectionProps = {
+  controller: AuthFileQuotaController;
+};
+
+export function AuthFileQuotaSection({ controller }: AuthFileQuotaSectionProps) {
+  const { t } = useTranslation();
+  const { file, quotaType, adapter, quota, status, loading, canRefresh, resetting } = controller;
+
+  // Claude always shows the newest data available: the stored reading or the proxy's
+  // response-header snapshot. The click-to-load prompt remains only when there is none.
+  const claudeHeaderState = useMemo(
+    () => (quotaType === 'claude' ? claudeHeaderQuotaState(file, t) : null),
+    [file, quotaType, t]
+  );
+  const claudeDisplay =
+    quotaType === 'claude'
+      ? pickLatestClaudeState(quota as ClaudeQuotaState | undefined, claudeHeaderState)
+      : null;
+
+  const resetQuotaAction = controller.canReset ? (
+    <Button
+      type="button"
+      variant="secondary"
+      size="sm"
+      className={styles.quotaResetCreditButton}
+      onClick={() => controller.reset()}
+      disabled={!canRefresh || loading}
+      loading={resetting}
+      title={t('codex_quota.reset_button')}
+      aria-label={t('codex_quota.reset_button')}
+    >
+      {!resetting && <IconRefreshCw size={14} />}
+      {t('codex_quota.reset_button')}
+    </Button>
+  ) : undefined;
   const quotaErrorMessage = resolveQuotaErrorMessage(
     t,
     quota?.errorStatus,
@@ -192,49 +245,34 @@ export function AuthFileQuotaSection(props: AuthFileQuotaSectionProps) {
 
   return (
     <div className={styles.quotaSection}>
-      {quotaStatus === 'loading' ? (
+      {claudeDisplay ? (
+        <>
+          {loading && <div className={styles.quotaMessage}>{t(`${adapter.i18nPrefix}.loading`)}</div>}
+          <adapter.Body quota={claudeDisplay} classes={compactQuotaClasses} />
+        </>
+      ) : status === 'loading' ? (
         <div className={styles.quotaMessage}>{t(`${adapter.i18nPrefix}.loading`)}</div>
-      ) : quotaStatus === 'idle' ? (
+      ) : status === 'idle' ? (
         <button
           type="button"
           className={`${styles.quotaMessage} ${styles.quotaMessageAction}`}
-          onClick={() => void refreshQuotaForFile()}
-          disabled={!canRefreshQuota}
+          onClick={() => void controller.refresh()}
+          disabled={!canRefresh}
         >
           {t(`${adapter.i18nPrefix}.idle`)}
         </button>
-      ) : quotaStatus === 'error' ? (
+      ) : status === 'error' ? (
         <div className={styles.quotaError}>
           {t(`${adapter.i18nPrefix}.load_failed`, {
             message: quotaErrorMessage,
           })}
         </div>
-      ) : quota && !retainedClaudeUsage ? (
+      ) : quota ? (
         <adapter.Body quota={quota} classes={compactQuotaClasses} />
-      ) : !retainedClaudeUsage ? (
+      ) : (
         <div className={styles.quotaMessage}>{t(`${adapter.i18nPrefix}.idle`)}</div>
-      ) : null}
-      {retainedClaudeUsage && quota && <adapter.Body quota={quota} classes={compactQuotaClasses} />}
-      {(showRefreshQuotaAction || resetQuotaAction) && (
-        <div className={styles.quotaCardActions}>
-          {resetQuotaAction}
-          {showRefreshQuotaAction && (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className={styles.quotaResetCreditButton}
-              onClick={() => void refreshQuotaForFile()}
-              disabled={!canRefreshQuota || quotaStatus === 'loading'}
-              loading={quotaStatus === 'loading'}
-              title={t('auth_files.quota_refresh_hint')}
-            >
-              {quotaStatus !== 'loading' && <IconRefreshCw size={14} />}
-              {t('auth_files.quota_refresh_single')}
-            </Button>
-          )}
-        </div>
       )}
+      {resetQuotaAction && <div className={styles.quotaCardActions}>{resetQuotaAction}</div>}
     </div>
   );
 }

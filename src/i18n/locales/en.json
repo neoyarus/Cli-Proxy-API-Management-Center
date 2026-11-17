@@ -517,6 +517,7 @@
     "stale_snapshot": "Refresh failed. Showing last successful check: {{time}}",
     "source_label": "Source",
     "source_headers": "response headers, {{time}}",
+    "no_header_data": "No response data yet",
     "plan_label": "Plan",
     "plan_unknown": "Unknown",
     "plan_free": "Free",

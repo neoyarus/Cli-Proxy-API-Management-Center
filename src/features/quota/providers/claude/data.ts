@@ -271,10 +271,22 @@ export const resolveClaudePlanType = (profile: ClaudeProfileResponse | null): st
 };
 
 /**
- * Live usage from the usage API; when that fails (e.g. a setup token lacks the scope),
- * fall back to the proxy's snapshot of the latest response's rate-limit headers.
+ * Long-lived setup tokens (`claude setup-token`) are inference-only and cannot call the
+ * usage, profile or reset endpoints. CPA flags them as `setup_token` in the credential list.
+ */
+export const isClaudeSetupTokenFile = (file: AuthFileItem): boolean =>
+  file['setup_token'] === true || file['setupToken'] === true;
+
+/**
+ * Live usage from the usage API; when that fails, fall back to the proxy's snapshot of the
+ * latest response's rate-limit headers. Setup tokens skip the usage API entirely.
  */
 const fetchClaudeQuota = async (file: AuthFileItem, t: TFunction): Promise<ClaudeQuotaData> => {
+  if (isClaudeSetupTokenFile(file)) {
+    const snapshot = readClaudeHeaderSnapshot(await latestAuthFile(file)) ?? readClaudeHeaderSnapshot(file);
+    if (!snapshot) throw new Error(t('claude_quota.no_header_data'));
+    return claudeQuotaFromHeaders(snapshot, t);
+  }
   try {
     return await fetchLiveClaudeQuota(file, t);
   } catch (err) {
@@ -386,4 +398,37 @@ export const CLAUDE_CONFIG: QuotaProviderData<ClaudeQuotaState, ClaudeQuotaData>
     error: message,
     errorStatus: status,
   }),
+};
+
+/**
+ * What a Claude card shows before any request: the credential's header snapshot from the
+ * credential list, or null when the proxy has not seen a response for it yet.
+ */
+export const claudeHeaderQuotaState = (
+  file: AuthFileItem,
+  t: TFunction,
+  nowMs: number = Date.now()
+): ClaudeQuotaState | null => {
+  const snapshot = readClaudeHeaderSnapshot(file, nowMs);
+  return snapshot ? CLAUDE_CONFIG.buildSuccessState(claudeQuotaFromHeaders(snapshot, t)) : null;
+};
+
+const observedMs = (state: ClaudeQuotaState): number => {
+  const parsed = state.observedAt ? Date.parse(state.observedAt) : NaN;
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+/**
+ * The Claude usage a card should show: the newer of the stored reading (a live check or an
+ * earlier header read) and the current header snapshot. Null only when neither has data.
+ */
+export const pickLatestClaudeState = (
+  stored: ClaudeQuotaState | undefined,
+  header: ClaudeQuotaState | null
+): ClaudeQuotaState | null => {
+  const storedWithData = stored && hasClaudeUsageData(stored) ? stored : null;
+  if (storedWithData && header) {
+    return observedMs(storedWithData) >= observedMs(header) ? storedWithData : header;
+  }
+  return storedWithData ?? header;
 };

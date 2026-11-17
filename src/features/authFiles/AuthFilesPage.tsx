@@ -386,7 +386,7 @@ export function AuthFilesPage() {
     () => {
       void loadFiles({ background: true }).catch(() => {});
     },
-    isCurrentLayer ? 240_000 : null
+    isCurrentLayer ? 60_000 : null
   );
 
   /* ---------- 过滤 / 排序 / 分页 memos ---------- */

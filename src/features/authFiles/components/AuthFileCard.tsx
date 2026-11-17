@@ -11,6 +11,7 @@ import {
   IconModelCluster,
   IconRefreshCw,
   IconSettings,
+  IconSidebarQuota,
   IconTrash2,
 } from '@/components/ui/icons';
 import { ProviderStatusBar } from '@/components/providers/ProviderStatusBar';
@@ -32,7 +33,10 @@ import {
 import { deriveAuthFileIdentity } from '@/features/authFiles/identity';
 import { resolveAuthFileQuotaType } from '@/features/authFiles/logic';
 import type { AuthFileStatusBarData } from '@/features/authFiles/hooks/useAuthFilesStatusBarCache';
-import { AuthFileQuotaSection } from '@/features/authFiles/components/AuthFileQuotaSection';
+import {
+  AuthFileQuotaSection,
+  useAuthFileQuota,
+} from '@/features/authFiles/components/AuthFileQuotaSection';
 import { AuthFileCooldownSection } from './AuthFileCooldownSection';
 import { getSiwcBindingStatus, supportsSiwcBinding } from '@/features/oauth/siwcBinding';
 import { SiwcStatusBadge } from '@/features/oauth/components/SiwcStatusBadge';
@@ -98,6 +102,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
 
   const quotaType = resolveAuthFileQuotaType(file, quotaFilterType);
   const showQuotaLayout = Boolean(quotaType) && !isRuntimeOnly && !compact;
+  const quota = useAuthFileQuota(file, showQuotaLayout ? quotaType : null, disableControls);
 
   const successCount = file.successCount ?? 0;
   const failureCount = file.failureCount ?? 0;
@@ -262,9 +267,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
         </div>
       )}
 
-      {showQuotaLayout && quotaType && (
-        <AuthFileQuotaSection file={file} quotaType={quotaType} disableControls={disableControls} />
-      )}
+      {quota && <AuthFileQuotaSection controller={quota} />}
 
       <footer className={styles.actions}>
         <div className={styles.actionsMain}>
@@ -329,6 +332,19 @@ export function AuthFileCard(props: AuthFileCardProps) {
               >
                 {deleting === file.name ? <LoadingSpinner size={14} /> : <IconTrash2 size={15} />}
               </Button>
+              {quota && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void quota.refresh()}
+                  className={styles.iconButton}
+                  title={t('auth_files.quota_refresh_single')}
+                  aria-label={t('auth_files.quota_refresh_single')}
+                  disabled={!quota.canRefresh || quota.loading}
+                >
+                  {quota.loading ? <LoadingSpinner size={14} /> : <IconSidebarQuota size={15} />}
+                </Button>
+              )}
             </div>
           )}
         </div>
