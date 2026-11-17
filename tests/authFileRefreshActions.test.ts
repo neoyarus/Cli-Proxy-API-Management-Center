@@ -27,6 +27,7 @@ function harness() {
     getAuthFileRefreshKey,
     isRuntimeOnlyAuthFile: () => false,
     supportsAuthFileManualRefresh: () => true,
+    isClaudeSetupTokenFile: () => false,
     refreshAllPendingRef: { current: false },
     manualRefreshPendingRef: { current: new Set<string>() },
     setManualRefreshing: () => {},
