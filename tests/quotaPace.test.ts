@@ -64,10 +64,18 @@ describe('window pace', () => {
 
   test('once measured, the tick and its gap share one whole-pixel centre', () => {
     // 64% of 437px is 279.68px: both the gap and the tick centre on 280px.
-    expect(paceGeometry(64, 437)).toEqual({ tickLeft: '279px', gapStart: '277px', gapEnd: '283px' });
+    expect(paceGeometry(64, 437)).toEqual({
+      tickLeft: '279px',
+      gapStart: '277px',
+      gapEnd: '283px',
+    });
     // Kept inside the bar's ends.
     expect(paceGeometry(0, 437)).toEqual({ tickLeft: '2px', gapStart: '0px', gapEnd: '6px' });
-    expect(paceGeometry(100, 437)).toEqual({ tickLeft: '433px', gapStart: '431px', gapEnd: '437px' });
+    expect(paceGeometry(100, 437)).toEqual({
+      tickLeft: '433px',
+      gapStart: '431px',
+      gapEnd: '437px',
+    });
   });
 });
 

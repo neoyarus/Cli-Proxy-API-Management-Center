@@ -69,7 +69,9 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
  */
 export function paceGeometry(paceLeftPercent: number, widthPx: number | null) {
   if (widthPx !== null && widthPx >= PACE_GAP_PX * 2) {
-    const center = Math.round(clamp((widthPx * paceLeftPercent) / 100, PACE_GAP_PX, widthPx - PACE_GAP_PX));
+    const center = Math.round(
+      clamp((widthPx * paceLeftPercent) / 100, PACE_GAP_PX, widthPx - PACE_GAP_PX)
+    );
     return {
       tickLeft: `${center - PACE_TICK_PX / 2}px`,
       gapStart: `${center - PACE_GAP_PX}px`,
