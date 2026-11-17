@@ -257,9 +257,11 @@ describe('setup tokens and newest-data display', () => {
     const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
     const quotaCard = read('src/features/quota/components/QuotaCard.tsx');
     expect(quotaCard).toContain('pickLatestClaudeState(quota as ClaudeQuotaState | undefined, claudeHeaderState)');
-    expect(quotaCard).toContain("{(status !== 'idle' || claudeDisplay) && !glance && (");
+    // Setup tokens get no action row at all: no reset grants and no quota refresh.
+    expect(quotaCard).toContain(
+      "{(status !== 'idle' || claudeDisplay) && !glance && !setupToken && ("
+    );
     expect(quotaCard).toContain("entry.type === 'claude' && status !== 'idle' && !setupToken,");
-    expect(quotaCard).toContain("{entry.type === 'claude' && !setupToken && status !== 'idle' && (");
 
     const section = read('src/features/authFiles/components/AuthFileQuotaSection.tsx');
     expect(section).toContain('pickLatestClaudeState(quota as ClaudeQuotaState | undefined, claudeHeaderState)');
@@ -270,5 +272,13 @@ describe('setup tokens and newest-data display', () => {
     expect(footer).toContain('onClick={() => void quota.refresh()}');
     expect(footer).toContain('<IconSidebarQuota size={15} />');
     expect(footer).toContain("title={t('auth_files.quota_refresh_single')}");
+    // ...but not for setup tokens, which also lose the credential refresh button.
+    expect(footer).toContain('{quota && !setupToken && (');
+    expect(authCard).toContain(
+      'const showManualRefreshButton =\n    !isRuntimeOnly && supportsAuthFileManualRefresh(providerKey) && !setupToken;'
+    );
+    expect(read('src/features/authFiles/hooks/useAuthFilesData.ts')).toContain(
+      'isClaudeSetupTokenFile(item) ||'
+    );
   });
 });

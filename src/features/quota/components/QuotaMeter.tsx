@@ -10,50 +10,13 @@
  */
 
 import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { paceGeometry } from '../pace';
 import type { QuotaClassMap } from '../types';
-
-export const QUOTA_PROGRESS_HIGH_THRESHOLD = 70;
-export const QUOTA_PROGRESS_MEDIUM_THRESHOLD = 30;
-
-/** Gap cut into the bar on each side of the pace tick's centre. */
-const PACE_GAP_PX = 3;
-/** Matches `.quotaPaceTick { width }`. */
-const PACE_TICK_PX = 2;
-
-export interface QuotaMeterProps {
-  percent: number | null;
-  classes: QuotaClassMap;
-  index?: number;
-  /** Share of the window's time still left, 0–100; null or absent draws no tick. */
-  paceLeftPercent?: number | null;
-  /** Tooltip for the bar when the tick is shown. */
-  paceTitle?: string;
-}
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
-/**
- * Where the tick and its gap go. Once the bar's width is known the centre is a whole pixel,
- * so the gap edges and the tick land on the same pixel grid and the gap stays even on both
- * sides; percentages alone round the mask and the tick differently. Before that (first paint,
- * server render) it falls back to percentages.
- */
-export function paceGeometry(paceLeftPercent: number, widthPx: number | null) {
-  if (widthPx !== null && widthPx >= PACE_GAP_PX * 2) {
-    const center = Math.round(clamp((widthPx * paceLeftPercent) / 100, PACE_GAP_PX, widthPx - PACE_GAP_PX));
-    return {
-      tickLeft: `${center - PACE_TICK_PX / 2}px`,
-      gapStart: `${center - PACE_GAP_PX}px`,
-      gapEnd: `${center + PACE_GAP_PX}px`,
-    };
-  }
-  const at = `clamp(${PACE_GAP_PX}px, ${clamp(paceLeftPercent, 0, 100)}%, calc(100% - ${PACE_GAP_PX}px))`;
-  return {
-    tickLeft: `calc(${at} - ${PACE_TICK_PX / 2}px)`,
-    gapStart: `calc(${at} - ${PACE_GAP_PX}px)`,
-    gapEnd: `calc(${at} + ${PACE_GAP_PX}px)`,
-  };
-}
+export const QUOTA_PROGRESS_HIGH_THRESHOLD = 70;
+export const QUOTA_PROGRESS_MEDIUM_THRESHOLD = 30;
 
 export function QuotaMeter({
   percent,

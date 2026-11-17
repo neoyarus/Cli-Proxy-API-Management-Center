@@ -38,6 +38,7 @@ import {
 } from '@/features/authFiles/constants';
 import { deriveAuthFileIdentity } from '@/features/authFiles/identity';
 import { resolveAuthFileQuotaType } from '@/features/authFiles/logic';
+import { isClaudeSetupTokenFile } from '@/features/quota/providers/claude/data';
 import type { AuthFileStatusBarData } from '@/features/authFiles/hooks/useAuthFilesStatusBarCache';
 import {
   AuthFileQuotaSection,
@@ -105,7 +106,11 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const providerKey = normalizeProviderKey(String(file.type ?? file.provider ?? 'unknown'));
   const isAistudio = providerKey === 'aistudio';
   const showModelsButton = !isRuntimeOnly || isAistudio;
-  const showManualRefreshButton = !isRuntimeOnly && supportsAuthFileManualRefresh(providerKey);
+  // Setup tokens have no refresh token, and their quota is only the proxy's header snapshot,
+  // which reloads with the list: neither refresh button applies.
+  const setupToken = isClaudeSetupTokenFile(file);
+  const showManualRefreshButton =
+    !isRuntimeOnly && supportsAuthFileManualRefresh(providerKey) && !setupToken;
   const isManualRefreshing = manualRefreshing[getAuthFileRefreshKey(file)] === true;
   const typeLabel = getTypeLabel(t, providerKey);
   const typeColor = getTypeColor(providerKey, resolvedTheme);
@@ -379,7 +384,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
               >
                 {deleting === file.name ? <LoadingSpinner size={14} /> : <IconTrash2 size={15} />}
               </Button>
-              {quota && (
+              {quota && !setupToken && (
                 <Button
                   variant="secondary"
                   size="sm"

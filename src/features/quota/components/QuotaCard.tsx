@@ -245,9 +245,10 @@ export function QuotaCard(props: QuotaCardProps) {
         )}
       </div>
 
-      {(status !== 'idle' || claudeDisplay) && !glance && (
+      {/* Setup tokens get neither button: no reset grants, and the snapshot reloads with the list. */}
+      {(status !== 'idle' || claudeDisplay) && !glance && !setupToken && (
         <footer className={styles.actionRow}>
-          {entry.type === 'claude' && !setupToken && status !== 'idle' && (
+          {entry.type === 'claude' && status !== 'idle' && (
             <button
               type="button"
               className={styles.actionPill}
