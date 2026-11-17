@@ -69,23 +69,24 @@ export function ClaudeQuotaBody({
           })}
         </div>
       )}
-      {(planType || planItems || fromHeaders) && (
+      {fromHeaders && (
+        // Plain muted text, not a chip: it notes where the numbers came from.
+        <div className={classes.codexPlan}>
+          <span className={classes.codexPlanLabel} data-quota-source="headers">
+            {t('claude_quota.source_label')}{' '}
+            {t('claude_quota.source_headers', {
+              time: quota.observedAt ? new Date(quota.observedAt).toLocaleString(language) : '--',
+            })}
+          </span>
+        </div>
+      )}
+      {(planType || planItems) && (
         <div className={classes.codexPlan}>
           {planType && (
             <span className={classes.codexPlanItem} data-quota-plan="">
               <span className={classes.codexPlanLabel}>{t('claude_quota.plan_label')}</span>
               <span className={planValueClassForTier(resolveClaudeCardTier(planType), classes)}>
                 {t(`claude_quota.${planType}`)}
-              </span>
-            </span>
-          )}
-          {fromHeaders && (
-            <span className={classes.codexPlanItem} data-quota-source="headers">
-              <span className={classes.codexPlanLabel}>{t('claude_quota.source_label')}</span>
-              <span className={classes.codexPlanValue}>
-                {t('claude_quota.source_headers', {
-                  time: quota.observedAt ? new Date(quota.observedAt).toLocaleString(language) : '--',
-                })}
               </span>
             </span>
           )}
