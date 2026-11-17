@@ -4,6 +4,7 @@ import { apiClient, authFilesApi } from '@/services/api';
 import type { AuthFileRefreshResult, ManualCooldownRequest } from '@/services/api/authFiles';
 import { getAuthFileRefreshKey } from '@/features/authFiles/manualRefresh';
 import { notifyAuthFilesChanged } from '@/features/authFiles/authFilesEvents';
+import { isClaudeSetupTokenFile } from '@/features/quota/providers/claude/data';
 import { useNotificationStore } from '@/stores';
 import type { AuthFileItem } from '@/types';
 import { formatFileSize } from '@/utils/format';
@@ -528,6 +529,7 @@ export function useAuthFilesData(options?: UseAuthFilesDataOptions): UseAuthFile
         item.disabled === true ||
         isRuntimeOnlyAuthFile(item) ||
         !supportsAuthFileManualRefresh(provider) ||
+        isClaudeSetupTokenFile(item) ||
         refreshAllPendingRef.current ||
         manualRefreshPendingRef.current.has(key)
       ) {
@@ -702,7 +704,10 @@ export function useAuthFilesData(options?: UseAuthFilesDataOptions): UseAuthFile
       } catch (err: unknown) {
         if (connectionRevision !== apiClient.getConnectionRevision()) return;
         const message = err instanceof Error ? err.message : t('notification.update_failed');
-        showNotification(t('auth_files.manual_cooldown_failed', { name: item.name, message }), 'error');
+        showNotification(
+          t('auth_files.manual_cooldown_failed', { name: item.name, message }),
+          'error'
+        );
       }
     },
     [invalidateInFlightLoads, loadFiles, showNotification, t]

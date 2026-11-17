@@ -412,7 +412,8 @@ describe('Claude usage snapshot rendering and retention', () => {
     // The refresh action lives in the card's action row for every quota state; the
     // section keeps only the provider reset action.
     const footer = card.split('<footer')[1].split('</footer>')[0];
-    expect(footer).toContain('{quota && (');
+    // Fork: except setup tokens, whose quota is the header snapshot that reloads with the list.
+    expect(footer).toContain('{quota && !setupToken && (');
     expect(footer).toContain('onClick={() => void quota.refresh()}');
     expect(footer).toContain('disabled={!quota.canRefresh || quota.loading}');
     expect(footer).toContain("title={t('auth_files.quota_refresh_single')}");

@@ -172,7 +172,9 @@ describe('Claude quota from response headers', () => {
     expect(html).toContain('Source');
     expect(html).toContain('response headers, ');
     // Muted label text, not a chip: no plan-item pill and no bold value styling.
-    expect(html).toContain('class="codexPlanLabel" data-quota-source="headers">Source response headers, ');
+    expect(html).toContain(
+      'class="codexPlanLabel" data-quota-source="headers">Source response headers, '
+    );
     expect(html).not.toContain('codexPlanItem');
     expect(html).not.toContain('codexPlanValue');
 
@@ -189,7 +191,10 @@ describe('Claude quota from response headers', () => {
 
 describe('setup tokens and newest-data display', () => {
   const setupFile = (fiveHour: string, sevenDay: string, observedAt?: string) =>
-    ({ ...liveHeaderFile(fiveHour, sevenDay, observedAt), setup_token: true }) as unknown as AuthFileItem;
+    ({
+      ...liveHeaderFile(fiveHour, sevenDay, observedAt),
+      setup_token: true,
+    }) as unknown as AuthFileItem;
 
   test('recognizes the setup_token flag from the credential list', () => {
     expect(isClaudeSetupTokenFile(setupFile('0.1', '0.2'))).toBe(true);
@@ -219,7 +224,11 @@ describe('setup tokens and newest-data display', () => {
       return result(200, null);
     };
     authFilesApi.list = async () => ({ files: [], total: 0 });
-    const file = { name: 'claude-new.json', type: 'claude', setup_token: true } as unknown as AuthFileItem;
+    const file = {
+      name: 'claude-new.json',
+      type: 'claude',
+      setup_token: true,
+    } as unknown as AuthFileItem;
     await expect(CLAUDE_CONFIG.fetchQuota(file, translations.t)).rejects.toThrow(
       'No response data yet'
     );
@@ -231,11 +240,17 @@ describe('setup tokens and newest-data display', () => {
     expect(state.status).toBe('success');
     expect(state.source).toBe('headers');
     expect(state.windows.map((window) => window.usedPercent)).toEqual([44, 87]);
-    expect(claudeHeaderQuotaState({ name: 'x', type: 'claude' } as AuthFileItem, translations.t)).toBeNull();
+    expect(
+      claudeHeaderQuotaState({ name: 'x', type: 'claude' } as AuthFileItem, translations.t)
+    ).toBeNull();
   });
 
   test('the newer of the stored reading and the header snapshot is shown', () => {
-    const header = claudeHeaderQuotaState(headerFile('0.44', '0.87', '2026-11-17T09:58:00Z'), translations.t, NOW)!;
+    const header = claudeHeaderQuotaState(
+      headerFile('0.44', '0.87', '2026-11-17T09:58:00Z'),
+      translations.t,
+      NOW
+    )!;
     const olderLive: ClaudeQuotaState = {
       status: 'success',
       windows: [],
@@ -250,19 +265,27 @@ describe('setup tokens and newest-data display', () => {
     // Nothing stored yet and no header data: the card falls back to its load prompt.
     expect(pickLatestClaudeState({ status: 'idle', windows: [] }, null)).toBeNull();
     // A failed refresh without retained data does not hide the header snapshot.
-    expect(pickLatestClaudeState({ status: 'error', windows: [], error: 'x' }, header)).toBe(header);
+    expect(pickLatestClaudeState({ status: 'error', windows: [], error: 'x' }, header)).toBe(
+      header
+    );
   });
 
   test('cards show the newest data by default and keep refresh among the actions', () => {
     const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
     const quotaCard = read('src/features/quota/components/QuotaCard.tsx');
-    expect(quotaCard).toContain('pickLatestClaudeState(quota as ClaudeQuotaState | undefined, claudeHeaderState)');
-    expect(quotaCard).toContain("{(status !== 'idle' || claudeDisplay) && !glance && (");
+    expect(quotaCard).toContain(
+      'pickLatestClaudeState(quota as ClaudeQuotaState | undefined, claudeHeaderState)'
+    );
+    // Setup tokens get no action row at all: no reset grants and no quota refresh.
+    expect(quotaCard).toContain(
+      "{(status !== 'idle' || claudeDisplay) && !glance && !setupToken && ("
+    );
     expect(quotaCard).toContain("entry.type === 'claude' && status !== 'idle' && !setupToken,");
-    expect(quotaCard).toContain("{entry.type === 'claude' && !setupToken && status !== 'idle' && (");
 
     const section = read('src/features/authFiles/components/AuthFileQuotaSection.tsx');
-    expect(section).toContain('pickLatestClaudeState(quota as ClaudeQuotaState | undefined, claudeHeaderState)');
+    expect(section).toContain(
+      'pickLatestClaudeState(quota as ClaudeQuotaState | undefined, claudeHeaderState)'
+    );
     expect(section).not.toContain("t('auth_files.quota_refresh_single')");
 
     const authCard = read('src/features/authFiles/components/AuthFileCard.tsx');
@@ -270,5 +293,13 @@ describe('setup tokens and newest-data display', () => {
     expect(footer).toContain('onClick={() => void quota.refresh()}');
     expect(footer).toContain('<IconSidebarQuota size={15} />');
     expect(footer).toContain("title={t('auth_files.quota_refresh_single')}");
+    // ...but not for setup tokens, which also lose the credential refresh button.
+    expect(footer).toContain('{quota && !setupToken && (');
+    expect(authCard).toContain(
+      'const showManualRefreshButton =\n    !isRuntimeOnly && supportsAuthFileManualRefresh(providerKey) && !setupToken;'
+    );
+    expect(read('src/features/authFiles/hooks/useAuthFilesData.ts')).toContain(
+      'isClaudeSetupTokenFile(item) ||'
+    );
   });
 });
