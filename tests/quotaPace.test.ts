@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { I18nextProvider } from 'react-i18next';
 import i18n from '@/i18n';
 import { windowPace } from '@/features/quota/pace';
-import { QuotaMeter } from '@/features/quota/components/QuotaMeter';
+import { QuotaMeter, paceGeometry } from '@/features/quota/components/QuotaMeter';
 import { ClaudeQuotaBody } from '@/features/quota/providers/claude/ClaudeQuotaBody';
 import { QUOTA_CLASS_KEYS, bindQuotaClasses } from '@/features/quota/types';
 import type { ClaudeQuotaState } from '@/types';
@@ -53,10 +53,21 @@ describe('window pace', () => {
       })
     );
     expect(paced).toContain('class="quotaMeter" title="64% of the window left"');
-    expect(paced).toContain('class="quotaPaceTick" style="left:clamp(3px, 64%, calc(100% - 3px))"');
+    // Before the bar is measured (here: server render) the position is a percentage.
+    expect(paced).toContain(
+      'class="quotaPaceTick" style="left:calc(clamp(3px, 64%, calc(100% - 3px)) - 1px)"'
+    );
     expect(paced).toContain(
       'mask-image:linear-gradient(to right, #000 calc(clamp(3px, 64%, calc(100% - 3px)) - 3px)'
     );
+  });
+
+  test('once measured, the tick and its gap share one whole-pixel centre', () => {
+    // 64% of 437px is 279.68px: both the gap and the tick centre on 280px.
+    expect(paceGeometry(64, 437)).toEqual({ tickLeft: '279px', gapStart: '277px', gapEnd: '283px' });
+    // Kept inside the bar's ends.
+    expect(paceGeometry(0, 437)).toEqual({ tickLeft: '2px', gapStart: '0px', gapEnd: '6px' });
+    expect(paceGeometry(100, 437)).toEqual({ tickLeft: '433px', gapStart: '431px', gapEnd: '437px' });
   });
 });
 
