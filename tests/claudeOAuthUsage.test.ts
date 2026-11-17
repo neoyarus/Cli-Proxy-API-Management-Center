@@ -398,26 +398,29 @@ describe('Claude usage snapshot rendering and retention', () => {
     useQuotaStore.getState().clearQuotaCache();
   });
 
-  test('offers read-only refresh for every non-idle auth-file quota, including Claude', () => {
-    // This host imports SCSS modules, so cover the action wiring here and
+  test('offers read-only refresh for every auth-file quota, including Claude', () => {
+    // These hosts import SCSS modules, so cover the action wiring here and
     // verify its interaction with the production build in the browser.
-    const source = readFileSync(
+    const section = readFileSync(
       new URL('../src/features/authFiles/components/AuthFileQuotaSection.tsx', import.meta.url),
       'utf8'
     );
-    // Idle quota is refreshed via the clickable idle prompt; avoid a duplicate button.
-    expect(source).toContain("const showRefreshQuotaAction = quotaStatus !== 'idle';");
-    expect(source).toContain('{showRefreshQuotaAction && (');
-    expect(source).toContain('<div className={styles.quotaCardActions}>');
-    expect(source).toContain('onClick={() => void refreshQuotaForFile()}');
-    expect(source).toContain("disabled={!canRefreshQuota || quotaStatus === 'loading'}");
-    expect(source).toContain("loading={quotaStatus === 'loading'}");
-    expect(source).toContain("{t('auth_files.quota_refresh_single')}");
-    expect(source).toContain("if (quota?.status === 'loading' || resettingQuota) return;");
-    expect(source).toContain(
-      'const canRefreshQuota = !disableControls && !file.disabled && !resettingQuota;'
+    const card = readFileSync(
+      new URL('../src/features/authFiles/components/AuthFileCard.tsx', import.meta.url),
+      'utf8'
     );
-    expect(source).toContain('{resetQuotaAction}');
+    // The refresh action lives in the card's action row for every quota state; the
+    // section keeps only the provider reset action.
+    const footer = card.split('<footer')[1].split('</footer>')[0];
+    expect(footer).toContain('{quota && (');
+    expect(footer).toContain('onClick={() => void quota.refresh()}');
+    expect(footer).toContain('disabled={!quota.canRefresh || quota.loading}');
+    expect(footer).toContain("title={t('auth_files.quota_refresh_single')}");
+    expect(section).toContain("if (quota?.status === 'loading' || resettingQuota) return;");
+    expect(section).toContain(
+      'const canRefresh = !disableControls && !file.disabled && !resettingQuota;'
+    );
+    expect(section).toContain('<div className={styles.quotaCardActions}>{resetQuotaAction}</div>');
     expect(CLAUDE_CONFIG).not.toHaveProperty('resetQuota');
   });
 
