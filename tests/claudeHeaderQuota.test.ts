@@ -159,6 +159,10 @@ describe('Claude quota from response headers', () => {
     expect(html).toContain('data-quota-source="headers"');
     expect(html).toContain('Source');
     expect(html).toContain('response headers, ');
+    // Muted label text, not a chip: no plan-item pill and no bold value styling.
+    expect(html).toContain('class="codexPlanLabel" data-quota-source="headers">Source response headers, ');
+    expect(html).not.toContain('codexPlanItem');
+    expect(html).not.toContain('codexPlanValue');
 
     const live = renderToStaticMarkup(
       createElement(
