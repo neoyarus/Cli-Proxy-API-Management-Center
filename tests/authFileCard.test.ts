@@ -13,9 +13,10 @@ const styles = readFileSync(
 );
 
 describe('auth file card presentation contract', () => {
-  test('uses identity rather than logos or duplicate status badges', () => {
-    expect(source).not.toContain('<img');
-    expect(source).not.toContain('getAuthFileIcon');
+  test('leads with the provider logo and identity, without duplicate status badges', () => {
+    // Fork: the provider logo replaces the provider name badge (one <img>, in the header).
+    expect(source.match(/<img/g)).toHaveLength(1);
+    expect(source.split('<header')[1].split('</header>')[0]).toContain('<img src={providerIcon}');
     expect(source).not.toContain('stateBadge');
     expect(source).toContain('<h3');
     expect(source).toContain('{identity.primary}');

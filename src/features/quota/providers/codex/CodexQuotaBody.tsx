@@ -21,6 +21,8 @@ import { formatDateTimeValue } from '@/utils/format';
 import { useNow } from '@/hooks/useNow';
 import { QuotaMeter } from '../../components/QuotaMeter';
 import { QuotaResetLabel } from '../../components/QuotaResetLabel';
+import { QuotaPaceIcon } from '../../components/QuotaPaceIcon';
+import { windowPace } from '../../pace';
 import { collectQuotaRowInstants, pickUrgentRowId, resetCreditRowId } from '../../resetSchedule';
 import { planValueClassForTier, resolveCodexCardTier } from '../../cardTier';
 import type { QuotaBodyProps } from '../../types';
@@ -187,6 +189,7 @@ export function CodexQuotaBody({
           const resetDisplay = buildResetDisplay(window.resetLabel, window.resetAtMs, now, locale);
 
           const soon = window.id === soonestRowId;
+          const pace = windowPace(clampedUsed, window.resetAtMs, window.periodHours, now);
 
           return (
             <div
@@ -198,12 +201,23 @@ export function CodexQuotaBody({
                 <span className={classes.quotaModel}>{windowLabel}</span>
                 <div className={classes.quotaMeta}>
                   <span className={classes.quotaPercent}>{percentLabel}</span>
+                  {pace?.pace && <QuotaPaceIcon pace={pace.pace} classes={classes} />}
                   {resetDisplay && (
                     <QuotaResetLabel display={resetDisplay} classes={classes} soon={soon} />
                   )}
                 </div>
               </div>
-              <QuotaMeter percent={remaining} classes={classes} index={index} />
+              <QuotaMeter
+                percent={remaining}
+                classes={classes}
+                index={index}
+                paceLeftPercent={pace?.windowLeftPercent ?? null}
+                paceTitle={
+                  pace
+                    ? t('quota_management.pace_window_left', { percent: pace.windowLeftPercent })
+                    : undefined
+                }
+              />
             </div>
           );
         })

@@ -23,7 +23,10 @@ import { statusBarDataFromRecentRequests } from '@/utils/recentRequests';
 import { formatDateTimeValue, formatFileSize } from '@/utils/format';
 import {
   formatModified,
+  getAuthFileIcon,
   getAuthFileStatusMessage,
+  getThemeSurfaceIconBackground,
+  isThemeSurfaceIconProvider,
   hasAuthFileStatusWarning,
   getTypeColor,
   getTypeLabel,
@@ -106,6 +109,7 @@ export function AuthFileCard(props: AuthFileCardProps) {
   const isManualRefreshing = manualRefreshing[getAuthFileRefreshKey(file)] === true;
   const typeLabel = getTypeLabel(t, providerKey);
   const typeColor = getTypeColor(providerKey, resolvedTheme);
+  const providerIcon = getAuthFileIcon(providerKey, resolvedTheme);
 
   const quotaType = resolveAuthFileQuotaType(file, quotaFilterType);
   const showQuotaLayout = Boolean(quotaType) && !isRuntimeOnly && !compact;
@@ -173,16 +177,31 @@ export function AuthFileCard(props: AuthFileCardProps) {
           />
         )}
         <h3 className={styles.identity}>
-          <span
-            className={styles.providerBadge}
-            style={{
-              backgroundColor: typeColor.bg,
-              color: typeColor.text,
-              ...(typeColor.border ? { border: typeColor.border } : {}),
-            }}
-          >
-            {typeLabel}
-          </span>
+          {providerIcon ? (
+            // The provider's logo stands in for its name; the name stays as the tooltip.
+            <span
+              className={styles.providerIcon}
+              title={typeLabel}
+              style={
+                isThemeSurfaceIconProvider(providerKey)
+                  ? { background: getThemeSurfaceIconBackground(resolvedTheme) }
+                  : undefined
+              }
+            >
+              <img src={providerIcon} alt={typeLabel} />
+            </span>
+          ) : (
+            <span
+              className={styles.providerBadge}
+              style={{
+                backgroundColor: typeColor.bg,
+                color: typeColor.text,
+                ...(typeColor.border ? { border: typeColor.border } : {}),
+              }}
+            >
+              {typeLabel}
+            </span>
+          )}
           <span
             className={`${styles.account} ${identity.kind === 'fileName' ? styles.accountMono : ''}`}
             title={identity.primary}
