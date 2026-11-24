@@ -65,14 +65,21 @@ export const readClaudeHeaderSnapshot = (
 ): ClaudeHeaderSnapshot | null => {
   const quota = (file as Record<string, unknown>).quota;
   if (!quota || typeof quota !== 'object') return null;
-  const { signals, observed_at: observedRaw } = quota as { signals?: unknown; observed_at?: unknown };
+  const { signals, observed_at: observedRaw } = quota as {
+    signals?: unknown;
+    observed_at?: unknown;
+  };
   if (!signals || typeof signals !== 'object') return null;
   const byName = new Map(
-    Object.entries(signals as Record<string, unknown>).map(([name, value]) => [name.toLowerCase(), value])
+    Object.entries(signals as Record<string, unknown>).map(([name, value]) => [
+      name.toLowerCase(),
+      value,
+    ])
   );
   const readNumber = (name: string): number | null => {
     const value = byName.get(name);
-    const parsed = typeof value === 'number' ? value : typeof value === 'string' ? Number(value.trim()) : NaN;
+    const parsed =
+      typeof value === 'number' ? value : typeof value === 'string' ? Number(value.trim()) : NaN;
     return Number.isFinite(parsed) ? parsed : null;
   };
 
@@ -95,7 +102,10 @@ export const readClaudeHeaderSnapshot = (
   if (!payload.five_hour && !payload.seven_day) return null;
 
   const observedMs = typeof observedRaw === 'string' ? Date.parse(observedRaw) : NaN;
-  return { payload, observedAt: Number.isFinite(observedMs) ? new Date(observedMs).toISOString() : '' };
+  return {
+    payload,
+    observedAt: Number.isFinite(observedMs) ? new Date(observedMs).toISOString() : '',
+  };
 };
 
 const claudeQuotaFromHeaders = (snapshot: ClaudeHeaderSnapshot, t: TFunction): ClaudeQuotaData => ({
@@ -283,14 +293,16 @@ export const isClaudeSetupTokenFile = (file: AuthFileItem): boolean =>
  */
 const fetchClaudeQuota = async (file: AuthFileItem, t: TFunction): Promise<ClaudeQuotaData> => {
   if (isClaudeSetupTokenFile(file)) {
-    const snapshot = readClaudeHeaderSnapshot(await latestAuthFile(file)) ?? readClaudeHeaderSnapshot(file);
+    const snapshot =
+      readClaudeHeaderSnapshot(await latestAuthFile(file)) ?? readClaudeHeaderSnapshot(file);
     if (!snapshot) throw new Error(t('claude_quota.no_header_data'));
     return claudeQuotaFromHeaders(snapshot, t);
   }
   try {
     return await fetchLiveClaudeQuota(file, t);
   } catch (err) {
-    const snapshot = readClaudeHeaderSnapshot(await latestAuthFile(file)) ?? readClaudeHeaderSnapshot(file);
+    const snapshot =
+      readClaudeHeaderSnapshot(await latestAuthFile(file)) ?? readClaudeHeaderSnapshot(file);
     if (snapshot) return claudeQuotaFromHeaders(snapshot, t);
     throw err;
   }

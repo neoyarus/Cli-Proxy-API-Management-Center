@@ -15,7 +15,13 @@ export type AuthFileCooldownDialogProps = {
   onClose: () => void;
 };
 
-export function AuthFileCooldownDialog({ open, file, busy, onConfirm, onClose }: AuthFileCooldownDialogProps) {
+export function AuthFileCooldownDialog({
+  open,
+  file,
+  busy,
+  onConfirm,
+  onClose,
+}: AuthFileCooldownDialogProps) {
   const { t, i18n } = useTranslation();
   const name = useId();
   // Recomputed when the dialog opens so the offered end times start from now.

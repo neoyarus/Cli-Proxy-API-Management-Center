@@ -14,11 +14,7 @@ import { isRuntimeOnlyAuthFile, type QuotaProviderType } from '@/features/authFi
 import { Button } from '@/components/ui/Button';
 import { IconRefreshCw } from '@/components/ui/icons';
 import { bindQuotaClasses } from '@/features/quota/types';
-import {
-  QUOTA_ADAPTERS,
-  type QuotaAdapter,
-  type QuotaCardState,
-} from '@/features/quota/providers';
+import { QUOTA_ADAPTERS, type QuotaAdapter, type QuotaCardState } from '@/features/quota/providers';
 import {
   claudeHeaderQuotaState,
   pickLatestClaudeState,
@@ -244,7 +240,9 @@ export function AuthFileQuotaSection({ controller }: AuthFileQuotaSectionProps) 
     <div className={styles.quotaSection}>
       {claudeDisplay ? (
         <>
-          {loading && <div className={styles.quotaMessage}>{t(`${adapter.i18nPrefix}.loading`)}</div>}
+          {loading && (
+            <div className={styles.quotaMessage}>{t(`${adapter.i18nPrefix}.loading`)}</div>
+          )}
           <adapter.Body quota={claudeDisplay} classes={compactQuotaClasses} />
         </>
       ) : status === 'loading' ? (
@@ -258,7 +256,7 @@ export function AuthFileQuotaSection({ controller }: AuthFileQuotaSectionProps) 
         >
           {t(`${adapter.i18nPrefix}.idle`)}
         </button>
-      ) : quotaStatus === 'error' && quota ? (
+      ) : status === 'error' && quota ? (
         <div className={styles.quotaError}>
           <QuotaErrorMessage quota={quota} i18nPrefix={adapter.i18nPrefix} />
         </div>
