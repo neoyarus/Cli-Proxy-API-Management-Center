@@ -1,11 +1,11 @@
+import type { ErrorRuleDraft } from '@/features/providers/errorRules';
+
+export type OAuthChannelRules = { channel: string; rules: ErrorRuleDraft[] };
+
 export type PayloadParamValueType = 'string' | 'number' | 'boolean' | 'json';
 export type DisableImageGenerationMode = 'false' | 'true' | 'chat' | 'passthrough';
 export type RoutingStrategy =
-  | 'round-robin'
-  | 'weighted-round-robin'
-  | 'fill-first'
-  | 'reset-drain'
-  | 'reset-pace';
+  'round-robin' | 'weighted-round-robin' | 'fill-first' | 'reset-drain' | 'reset-pace';
 export type PluginStoreAuthType = 'none' | 'bearer' | 'basic' | 'header' | 'github-token';
 export type PluginStoreAuthApplyTo = 'registry' | 'metadata' | 'artifact';
 export type PayloadParamValidationErrorCode =
@@ -19,6 +19,8 @@ export type CodexLiveICEServerDraft = {
 };
 
 export type VisualConfigFieldPath =
+  | 'serverId'
+  | 'oauthErrorRules'
   | 'trustedProxies'
   | 'discoveryServiceType'
   | 'transientErrorCooldownSeconds'
@@ -45,6 +47,8 @@ export type VisualConfigFieldPath =
   | 'streaming.nonstreamKeepaliveInterval';
 
 export type VisualConfigValidationErrorCode =
+  | 'invalid_server_id'
+  | 'invalid_oauth_error_rules'
   | 'invalid_trusted_proxies'
   | 'invalid_discovery_service_type'
   | 'invalid_duration'
@@ -95,11 +99,18 @@ export type PayloadRule = {
   params: PayloadParamEntry[];
 };
 
+export const PAYLOAD_REPLACE_ROLES = ['user', 'system', 'developer'] as const;
+
+export function isPayloadReplaceRole(value: string): boolean {
+  return PAYLOAD_REPLACE_ROLES.some((role) => role === value);
+}
+
 export type PayloadReplaceRule = {
   id: string;
   models: PayloadRule['models'];
-  target: { role: string; all: boolean; positions: string };
-  replacements: { id: string; from: string; to: string }[];
+  /** Paths select path mode when present, even if the draft list is empty. */
+  target: { role: string; all: boolean; positions: string; paths?: string[] };
+  replacements: { id: string; from: string; to: string; regex?: boolean }[];
   /** Malformed source shape; clear explicitly after repairing the draft. */
   invalid?: boolean;
 };
@@ -131,6 +142,8 @@ export type PluginStoreAuthRule = {
 
 /** UI draft keys; YAML persistence uses the v8 tree, not these flattened names. */
 export type VisualConfigValues = {
+  oauthErrorRules: OAuthChannelRules[];
+  serverId: string;
   githubToken: string;
   trustedProxies: string[];
   discoveryEnabled: boolean;
@@ -239,6 +252,8 @@ export const makeClientId = () => {
 };
 
 export const DEFAULT_VISUAL_VALUES: VisualConfigValues = {
+  oauthErrorRules: [],
+  serverId: '',
   githubToken: '',
   trustedProxies: [],
   discoveryEnabled: false,

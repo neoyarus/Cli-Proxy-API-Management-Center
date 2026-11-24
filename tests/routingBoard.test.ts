@@ -97,8 +97,12 @@ describe('routing board reading', () => {
       maxRetryCredentials: 0,
     });
     expect(readRoutingSettings({ routing: { strategy: 'bogus' } }).strategy).toBe('round-robin');
-    expect(readRoutingSettings({ routing: { strategy: 'reset_drain' } }).strategy).toBe('reset-drain');
-    expect(readRoutingSettings({ routing: { strategy: 'Reset_Pace' } }).strategy).toBe('reset-pace');
+    expect(readRoutingSettings({ routing: { strategy: 'reset_drain' } }).strategy).toBe(
+      'reset-drain'
+    );
+    expect(readRoutingSettings({ routing: { strategy: 'Reset_Pace' } }).strategy).toBe(
+      'reset-pace'
+    );
   });
 
   test('expands groups with key overrides, compat providers and credentials', () => {

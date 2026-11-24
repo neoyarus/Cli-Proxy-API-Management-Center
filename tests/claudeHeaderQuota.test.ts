@@ -298,8 +298,6 @@ describe('setup tokens and newest-data display', () => {
     expect(authCard).toContain(
       'const showManualRefreshButton =\n    !isRuntimeOnly && supportsAuthFileManualRefresh(providerKey) && !setupToken;'
     );
-    expect(read('src/features/authFiles/hooks/useAuthFilesData.ts')).toContain(
-      'isClaudeSetupTokenFile(item) ||'
-    );
+    // refreshAuthFile's own setup-token guard is covered in authFileRefreshActions.test.ts.
   });
 });

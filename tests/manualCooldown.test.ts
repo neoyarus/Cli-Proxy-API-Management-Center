@@ -24,7 +24,13 @@ describe('manual credential cooldown', () => {
 
   test('offers fixed hours and, with header data, the next 5h and weekly resets', () => {
     const plain = cooldownChoices({ name: 'codex.json', type: 'codex' } as AuthFileItem, NOW);
-    expect(plain.map((choice) => choice.id)).toEqual(['hours-1', 'hours-3', 'hours-5', 'hours-12', 'hours-24']);
+    expect(plain.map((choice) => choice.id)).toEqual([
+      'hours-1',
+      'hours-3',
+      'hours-5',
+      'hours-12',
+      'hours-24',
+    ]);
     expect(plain[2].untilMs).toBe(NOW + 5 * 3_600_000);
 
     const claude = {
@@ -41,7 +47,9 @@ describe('manual credential cooldown', () => {
       },
     } as unknown as AuthFileItem;
     const choices = cooldownChoices(claude, NOW);
-    expect(choices.slice(-2).map((choice) => [choice.id, new Date(choice.untilMs).toISOString()])).toEqual([
+    expect(
+      choices.slice(-2).map((choice) => [choice.id, new Date(choice.untilMs).toISOString()])
+    ).toEqual([
       ['five_hour', '2026-11-17T12:30:00.000Z'],
       ['seven_day', '2026-11-19T08:00:00.000Z'],
     ]);
@@ -54,11 +62,16 @@ describe('manual credential cooldown', () => {
       calls.push([path, body]);
       return { status: 'ok', cooldown_until: '' };
     }) as typeof apiClient.post;
-    await authFilesApi.setManualCooldown('claude-n.json', 'idx-1', { until: '2026-11-17T12:00:00Z' });
+    await authFilesApi.setManualCooldown('claude-n.json', 'idx-1', {
+      until: '2026-11-17T12:00:00Z',
+    });
     await authFilesApi.setManualCooldown('claude-n.json', undefined, { durationSeconds: 3600 });
     await authFilesApi.setManualCooldown('claude-n.json', 'idx-1', null);
     expect(calls).toEqual([
-      ['/credentials/cooldown', { name: 'claude-n.json', auth_index: 'idx-1', until: '2026-11-17T12:00:00Z' }],
+      [
+        '/credentials/cooldown',
+        { name: 'claude-n.json', auth_index: 'idx-1', until: '2026-11-17T12:00:00Z' },
+      ],
       ['/credentials/cooldown', { name: 'claude-n.json', duration_seconds: 3600 }],
       ['/credentials/cooldown', { name: 'claude-n.json', auth_index: 'idx-1' }],
     ]);
@@ -69,7 +82,9 @@ describe('manual credential cooldown', () => {
     const card = read('src/features/authFiles/components/AuthFileCard.tsx');
     const footer = card.split('<footer')[1].split('</footer>')[0];
     expect(footer).toContain('<IconTimer size={15} />');
-    expect(footer).toContain("cooldownUntil !== null ? void changeCooldown(null) : setCooldownDialogOpen(true)");
+    expect(footer).toContain(
+      'cooldownUntil !== null ? void changeCooldown(null) : setCooldownDialogOpen(true)'
+    );
     expect(footer).toContain("'auth_files.manual_cooldown_resume'");
     expect(card).toContain("t('auth_files.manual_cooldown_active', {");
     expect(card).toContain('<AuthFileCooldownDialog');

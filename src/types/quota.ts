@@ -262,6 +262,7 @@ export interface AntigravityQuotaBucket {
 }
 
 export interface AntigravityQuotaState {
+  validation?: { url?: string };
   status: 'idle' | 'loading' | 'success' | 'error';
   groups: AntigravityQuotaGroup[];
   subscription?: AntigravityQuotaSubscription | null;
@@ -345,6 +346,20 @@ export interface DevinQuotaData {
 
 export interface DevinQuotaState extends DevinQuotaData {
   status: 'idle' | 'loading' | 'success' | 'error';
+  error?: string;
+  errorStatus?: number;
+}
+
+/** Premium-request quota observation, never the credential-bearing response. */
+export interface CopilotQuotaData {
+  remaining: number | null;
+  entitlement: number | null;
+  percentRemaining: number;
+}
+
+export interface CopilotQuotaState {
+  status: 'idle' | 'loading' | 'success' | 'error';
+  data?: CopilotQuotaData;
   error?: string;
   errorStatus?: number;
 }
